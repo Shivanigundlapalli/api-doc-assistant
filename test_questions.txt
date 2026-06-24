@@ -1,0 +1,7 @@
+How do I authenticate?
+What is the rate limit?
+login issue
+api key problem
+tell me a joke about politicians
+what does this API do?
+how do I generate an API key?

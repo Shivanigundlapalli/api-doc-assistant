@@ -1,6 +1,18 @@
-.venv/
+# Environments
 .env
-chroma_db/
-**/__pycache__/
+.venv/
+venv/
+env/
+__pycache__/
 *.pyc
+
+# IDEs / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Streamlit specific
 .streamlit/secrets.toml
+
+# Vector Databases
+chroma_db/

@@ -1,177 +1,84 @@
-# API Documentation Assistant
+# API Documentation Assistant (Production Edition)
 
-> A Retrieval-Augmented Generation (RAG) app that answers questions from your API documentation using LangChain, Google Gemini, ChromaDB, and Streamlit.
-
-## Project Overview
-
-API Documentation Assistant is an AI-powered documentation helper built for teams and developers who want fast, grounded answers from their docs. It loads Markdown and PDF content, splits it into searchable chunks, stores embeddings in ChromaDB, and uses Gemini 2.5 Flash to generate responses that stay anchored to retrieved context.
-
-The goal of the project is simple: ask a question about your documentation and get a relevant answer without hallucinations. The Streamlit interface also shows the retrieved source context so you can verify where each answer came from.
+A production-grade, RAG-based AI assistant for API documentation. It features a modern SaaS UI, clean architecture, multi-format document support, advanced retrieval, and full observability using LangSmith.
 
 ## Features
 
-- Loads API documentation from Markdown and PDF files
-- Splits documents into chunks using `RecursiveCharacterTextSplitter`
-- Generates semantic embeddings with Gemini Embeddings
-- Stores vectors in ChromaDB for persistent retrieval
-- Performs semantic similarity search over documentation chunks
-- Uses Gemini 2.5 Flash to generate grounded answers
-- Streamlit-based web interface for an interactive experience
-- Displays retrieved sources alongside answers
-- Reduces hallucinations by answering only from retrieved documentation
+- **Multi-Format Support**: Automatically parses `.md`, `.pdf`, `.html`, `.json` (Swagger), and `.yaml`.
+- **Advanced Retrieval**: Uses ChromaDB with MMR (Maximal Marginal Relevance), deduplication, and similarity score thresholds.
+- **Enterprise UI**: A beautiful, responsive interface featuring Dark/Light modes, animations, and clean layouts.
+- **Guardrails & Query Rewriting**: Blocks harmful queries and optimizes vague questions using an LLM.
+- **Evaluation Pipeline**: Integrated with LangSmith for full tracing and observability.
+- **Exporting**: Save chat history as PDF or Markdown.
 
-## System Architecture Diagram
+## Clean Architecture
 
-```text
-User Question
-     |
-     v
-Streamlit App (app.py)
-     |
-     v
-Chroma Retriever <-----------------------------+
-     |                                         |
-     v                                         |
-Relevant Documentation Chunks                  |
-     |                                         |
-     v                                         |
-Gemini 2.5 Flash + Prompt Guardrails           |
-     |                                         |
-     v                                         |
-Grounded Answer + Retrieved Sources -----------+
+The codebase has been refactored for enterprise-level maintainability:
+
 ```
-
-## Project Structure
-
-```text
 api-doc-assistant/
-├── chroma_db/
-├── docs/
-│   ├── api_guide.pdf
-│   └── authentication.md
-├── .env
-├── app.py
-├── main.py
-├── requirements.txt
-└── test_questions.txt
+├── app.py                     # Main Streamlit Application
+├── main.py                    # Evaluation/CLI entry point
+├── components/                # UI Components (Sidebar, Hero, Chat, Styling)
+├── services/                  # Business Logic (LLM, Vector DB, Eval)
+├── utils/                     # Utilities (Loaders, Text Splitters, Exporters)
+├── prompts/                   # System Prompts (QA, Rewrite, Guardrails)
+├── data/                      # Exported chat histories
+└── docs/                      # Source documents
 ```
 
-### What each file does
+## Quick Start
 
-- `app.py` - Streamlit web app for asking questions and viewing answers
-- `main.py` - CLI-based RAG flow for testing the retrieval pipeline from the terminal
-- `docs/` - Source documentation used to build the knowledge base
-- `chroma_db/` - Persisted ChromaDB vector store
-- `requirements.txt` - Python dependencies
-- `.env` - Environment variables for Gemini authentication
-- `test_questions.txt` - Optional prompt ideas and test questions
+1. **Clone and Install**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-## Installation
+2. **Environment Variables**
+   Create a `.env` file:
+   ```env
+   GOOGLE_API_KEY=your_gemini_api_key
+   LANGCHAIN_TRACING_V2=true
+   LANGCHAIN_PROJECT=api-doc-assistant
+   LANGCHAIN_API_KEY=your_langsmith_key
+   ```
 
-### 1. Clone the repository
+3. **Run the Application**
+   ```bash
+   streamlit run app.py
+   ```
 
-```bash
-git clone <your-repo-url>
-cd api-doc-assistant
-```
+4. **Run Evaluation Pipeline**
+   ```bash
+   python main.py
+   ```
 
-### 2. Create a virtual environment
+## Deployment
 
-```bash
-python -m venv .venv
-```
+### Docker
+1. Create a `Dockerfile`:
+   ```dockerfile
+   FROM python:3.11-slim
+   WORKDIR /app
+   COPY requirements.txt .
+   RUN pip install --no-cache-dir -r requirements.txt
+   COPY . .
+   EXPOSE 8501
+   CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+   ```
+2. Build and run:
+   ```bash
+   docker build -t api-doc-assistant .
+   docker run -p 8501:8501 --env-file .env api-doc-assistant
+   ```
 
-### 3. Activate the virtual environment
+### Streamlit Cloud
+1. Push to GitHub.
+2. Go to [share.streamlit.io](https://share.streamlit.io/).
+3. Connect repository and add Secrets (e.g., `GOOGLE_API_KEY`).
+4. Deploy!
 
-On Windows:
-
-```bash
-.venv\\Scripts\\activate
-```
-
-On macOS/Linux:
-
-```bash
-source .venv/bin/activate
-```
-
-### 4. Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-## Environment Variables Setup
-
-Create a `.env` file in the project root and add your Gemini API key:
-
-```env
-GOOGLE_API_KEY=your_google_gemini_api_key_here
-```
-
-Optional environment variables can be added later if you expand the project, but the current app primarily depends on `GOOGLE_API_KEY`.
-
-## Running the Application
-
-### Run the Streamlit web app
-
-```bash
-streamlit run app.py
-```
-
-### Run the CLI version
-
-```bash
-python main.py
-```
-
-The Streamlit app is the recommended way to use the project. The CLI script is useful for quick terminal-based testing of the RAG workflow.
-
-## Example Questions
-
-Here are some example questions you can ask:
-
-- How do I authenticate?
-- How do I generate an API key?
-- What is the expiration policy for API keys?
-- How do I use the API key in a request?
-- What does a 401 Unauthorized error mean?
-- What does a 403 Forbidden error mean?
-
-## How RAG Works in This Project
-
-1. Documentation files are loaded from the `docs/` folder.
-2. The text is split into smaller chunks using `RecursiveCharacterTextSplitter`.
-3. Each chunk is converted into embeddings with Gemini Embeddings.
-4. Embeddings are stored in ChromaDB for persistent semantic search.
-5. When a user asks a question, the app retrieves the most relevant chunks.
-6. The retrieved context is passed to Gemini 2.5 Flash with strict instructions to answer only from the documentation.
-7. The answer is shown in the UI together with the retrieved source context.
-
-This RAG pattern improves accuracy by grounding the model in your documentation instead of relying on general world knowledge.
-
-## Technologies Used
-
-- Python
-- LangChain
-- Google Gemini 2.5 Flash
-- Gemini Embeddings
-- ChromaDB
-- Streamlit
-- python-dotenv
-
-## Future Improvements
-
-- Add multi-file ingestion from larger documentation sets
-- Support document upload directly from the UI
-- Add citation metadata for chunk-level traceability
-- Improve chunking strategies for long technical PDFs
-- Add conversation memory for follow-up questions
-- Build a polished document indexing pipeline with progress feedback
-- Add evaluation tests for answer grounding and retrieval quality
-
-## Author
-
-**Shivanigundlapalli**
-
-If you found this project useful, feel free to fork it, adapt it to your own documentation, and use it as a portfolio project for RAG-based applications.
+### Render / Railway
+1. Connect GitHub repo.
+2. Start command: `streamlit run app.py --server.port $PORT --server.address 0.0.0.0`
+3. Add environment variables.
