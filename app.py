@@ -11,14 +11,17 @@ validate_environment()
 from dotenv import load_dotenv
 load_dotenv()
 
-# Map Streamlit Secrets to os.environ for Cloud Deployment
+# Map Streamlit Secrets to os.environ for Cloud Deployment (e.g. for LangSmith)
 secret_keys = [
     "OPENAI_API_KEY", "GOOGLE_API_KEY", 
     "LANGCHAIN_API_KEY", "LANGCHAIN_PROJECT", "LANGCHAIN_TRACING_V2"
 ]
-for key in secret_keys:
-    if key in st.secrets:
-        os.environ[key] = str(st.secrets[key])
+try:
+    for key in secret_keys:
+        if key in st.secrets:
+            os.environ[key] = str(st.secrets[key])
+except Exception:
+    pass
 
 from services.evaluation_service import initialize_langsmith
 initialize_langsmith()
@@ -69,38 +72,47 @@ if "active_sources" not in st.session_state:
     st.session_state.active_sources = []
 
 # Handle Vector DB Initialization
+docs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs")
+init_logs = []
+
 with st.spinner("Initializing Vector Database..."):
     try:
+        # Check if docs directory exists
+        if not os.path.exists(docs_dir):
+            st.error(f"Critical Error: Documentation directory missing at {docs_dir}")
+            st.stop()
+            
+        docs_files = [f for f in os.listdir(docs_dir) if os.path.isfile(os.path.join(docs_dir, f))]
+        total_docs = len(docs_files)
+        
+        if total_docs == 0:
+            st.error("Critical Error: No documentation files found in 'docs/' directory.")
+            st.stop()
+            
         if st.session_state.rebuild_db:
-            docs = load_documents("docs")
-            if docs:
-                chunks = split_documents(docs)
-                vector_store = build_vector_store(chunks)
-                st.session_state.rebuild_db = False
-                st.rerun()
-            else:
-                st.error("No documents found in 'docs/' directory to build.")
-                st.session_state.rebuild_db = False
-                vector_store = None
+            init_logs.append("Force rebuilding database...")
+            docs = load_documents(docs_dir)
+            chunks = split_documents(docs)
+            vector_store = build_vector_store(chunks)
+            st.session_state.rebuild_db = False
+            st.rerun()
         else:
             vector_store = initialize_vector_store()
             if vector_store is None:
-                try:
-                    docs = load_documents("docs")
-                    if docs:
-                        chunks = split_documents(docs)
-                        vector_store = build_vector_store(chunks)
-                    else:
-                        st.warning("No documents found. Please add documents to the 'docs/' directory.")
-                        vector_store = None
-                except Exception as doc_e:
-                    st.warning(f"Could not load documents: {doc_e}. Please verify the 'docs/' directory exists.")
-                    vector_store = None
+                init_logs.append("Database missing or empty. Rebuilding...")
+                docs = load_documents(docs_dir)
+                chunks = split_documents(docs)
+                vector_store = build_vector_store(chunks)
+            else:
+                init_logs.append("Successfully loaded existing vector database.")
 
         retriever = get_retriever(vector_store) if vector_store else None
-        docs_files = [f for f in os.listdir('docs') if os.path.isfile(os.path.join('docs', f))] if os.path.exists('docs') else []
-        total_docs = len(docs_files)
         total_chunks = vector_store._collection.count() if vector_store else 0
+        
+        init_logs.append(f"Loaded documents: {total_docs}")
+        init_logs.append(f"Vector count: {total_chunks}")
+        init_logs.append("Retriever initialized successfully.")
+        
     except Exception as e:
         st.error(f"Failed to initialize vector database: {e}")
         vector_store = None
@@ -108,6 +120,34 @@ with st.spinner("Initializing Vector Database..."):
         total_docs = 0
         total_chunks = 0
         docs_files = []
+
+# Startup Diagnostics Panel (Collapsible)
+with st.expander("🛠️ Startup Diagnostics & Telemetry", expanded=True):
+    from config import get_openai_api_key, get_langsmith_key, get_google_api_key
+    
+    try:
+        get_google_api_key()
+        gemini_loaded = True
+    except Exception:
+        gemini_loaded = False
+        
+    openai_loaded = bool(get_openai_api_key())
+    langsmith_loaded = bool(get_langsmith_key())
+    
+    is_cloud = "STREAMLIT_RUNTIME_ENV" in os.environ or "STREAMLIT_SERVER_PORT" in os.environ
+    env_name = "Streamlit Cloud" if is_cloud else "Local"
+    
+    st.write(f"**Running Environment:** {env_name}")
+    st.write(f"**Gemini Key Loaded:** {gemini_loaded}")
+    st.write(f"**OpenAI Key Loaded:** {openai_loaded}")
+    st.write(f"**LangSmith Key Loaded:** {langsmith_loaded}")
+    
+    for log in init_logs:
+        st.text(log)
+
+if not gemini_loaded:
+    st.error("Missing required configuration. Please add your API keys in Streamlit Secrets.")
+    st.stop()
 
 # ==========================
 # UI Layout
@@ -264,6 +304,12 @@ with col_main:
                             <button class="btn-action">📥 Export</button>
                         </div>
                     """, unsafe_allow_html=True)
+                    
+                    # Telemetry for the live response
+                    with st.expander("🔍 Query Telemetry (Admin)", expanded=False):
+                        st.caption(f"Retrieved {len(docs)} document chunks.")
+                        for i, doc in enumerate(docs):
+                            st.caption(f"**Chunk {i+1} Metadata:** {doc.metadata}")
                 
                 if "chat_history" not in st.session_state:
                     st.session_state.chat_history = []

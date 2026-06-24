@@ -29,9 +29,11 @@ def get_embeddings():
 @st.cache_resource(show_spinner=False)
 def initialize_vector_store():
     """
-    Initializes the vector store.
+    Initializes the vector store. Checks for corruption or empty states (crucial for Cloud deployments).
     """
-    persist_directory = get_chroma_directory()
+    # Use absolute paths for Cloud reliability
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    persist_directory = os.path.join(base_dir, get_chroma_directory())
     embeddings = get_embeddings()
     
     try:
@@ -40,9 +42,12 @@ def initialize_vector_store():
                 persist_directory=persist_directory,
                 embedding_function=embeddings
             )
-            # Test if it's corrupted by getting the count
+            # Test if it's corrupted OR empty (which happens if Streamlit recreates the directory)
             try:
-                vector_store._collection.count()
+                count = vector_store._collection.count()
+                if count == 0:
+                    print("ChromaDB exists but collection is empty. Forcing rebuild.")
+                    return None
             except Exception as collection_e:
                 print(f"ChromaDB collection corrupted: {collection_e}")
                 raise collection_e
@@ -66,7 +71,8 @@ def build_vector_store(chunks):
     if not chunks:
         return None
         
-    persist_directory = get_chroma_directory()
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    persist_directory = os.path.join(base_dir, get_chroma_directory())
     try:
         embeddings = get_embeddings()
         

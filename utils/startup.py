@@ -27,8 +27,5 @@ def validate_environment():
         st.info(f"Please run: pip install -U {' '.join(missing)}")
         st.stop()
 
-    # 2. Validate essential API keys via config
-    # We defer this to the actual service initialization to avoid blocking the app 
-    # from loading completely. But we can ensure .env file is present.
-    if not os.path.exists(".env"):
-        st.warning("No `.env` file found. Using default environment variables, which may not be fully configured.")
+    # 2. Defer API key validation to the service layer.
+    pass
