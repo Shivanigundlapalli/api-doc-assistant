@@ -19,8 +19,8 @@ def inject_custom_css():
     
     --primary-color: #2563EB;
     --primary-hover: #3B82F6;
-    --sidebar-grad-start: #0F172A;
-    --sidebar-grad-end: #1E293B;
+    --sidebar-grad-start: #111827;
+    --sidebar-grad-end: #111827;
     
     --success-color: #10B981;
     --warning-color: #F59E0B;
@@ -156,12 +156,12 @@ div[data-testid="stChatInput"]:focus-within {
 
 /* Custom Buttons (Pills / Actions) */
 .btn-action {
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
+    background: linear-gradient(90deg, #2563EB, #3B82F6);
+    border: none;
     border-radius: 8px;
     padding: 0.4rem 0.8rem;
     font-size: 0.85rem;
-    color: var(--text-secondary);
+    color: #FFFFFF;
     cursor: pointer;
     transition: all var(--anim-speed) ease;
     display: inline-flex;
@@ -170,9 +170,9 @@ div[data-testid="stChatInput"]:focus-within {
     margin-right: 0.5rem;
 }
 .btn-action:hover {
-    background-color: var(--secondary-bg);
-    color: var(--text-primary);
-    border-color: var(--text-secondary);
+    background: linear-gradient(90deg, #3B82F6, #2563EB);
+    color: #FFFFFF;
+    box-shadow: 0 0 10px rgba(37, 99, 235, 0.4);
 }
 
 /* Context Panel (Right Column) */
