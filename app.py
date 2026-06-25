@@ -134,7 +134,13 @@ with st.expander("🛠️ Startup Diagnostics & Telemetry", expanded=True):
     openai_loaded = bool(get_openai_api_key())
     langsmith_loaded = bool(get_langsmith_key())
     
-    is_cloud = "STREAMLIT_RUNTIME_ENV" in os.environ or "STREAMLIT_SERVER_PORT" in os.environ
+    # Streamlit Cloud runs containers as 'appuser' and uses specific hostnames
+    is_cloud = (
+        "STREAMLIT_RUNTIME_ENV" in os.environ or 
+        os.environ.get("USER") == "appuser" or
+        "mount/src" in __file__ or
+        "streamlit" in os.environ.get("HOSTNAME", "").lower()
+    )
     env_name = "Streamlit Cloud" if is_cloud else "Local"
     
     st.write(f"**Running Environment:** {env_name}")

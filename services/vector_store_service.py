@@ -86,19 +86,18 @@ def build_vector_store(chunks):
         st.error(f"Failed to build vector store: {e}")
         return None
 
-def get_retriever(vector_store, k=5, fetch_k=10, similarity_threshold=0.60):
+def get_retriever(vector_store, k=8):
     """
-    Configures and returns the retriever with MMR and similarity threshold.
+    Configures and returns the retriever using standard similarity search with dense context.
     """
     if not vector_store:
         return None
         
     try:
         retriever = vector_store.as_retriever(
-            search_type="similarity_score_threshold",
+            search_type="similarity",
             search_kwargs={
-                "k": k,
-                "score_threshold": similarity_threshold
+                "k": k
             }
         )
         return retriever
