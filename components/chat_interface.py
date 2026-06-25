@@ -45,48 +45,54 @@ def render_source_chip(sources: list, developer_mode: bool = False):
 def render_enterprise_answer(parsed: dict, sources: list, msg_index: int = 0):
     """
     Renders the parsed structured LLM response into an Enterprise SaaS layout.
+    Matches the provided mockup styling perfectly.
     """
     # 1. Header & Confidence
     if parsed.get("confidence"):
-        st.markdown(f"**Confidence:** {parsed['confidence']}")
-        
-    # 2. Quick Answer Card
-    if parsed.get("quick_answer"):
         st.markdown(f"""
-            <div class="quick-answer-card">
-                <div class="qa-title">✅ Quick Answer</div>
-                <div>{parsed['quick_answer']}</div>
+            <div style='display: flex; justify-content: flex-end; margin-bottom: 10px;'>
+                <span style='font-size: 0.75rem; color: #666; display: flex; align-items: center; gap: 6px;'>
+                    Confidence: <span style='color: #48BB78;'>●</span> {parsed['confidence']}
+                </span>
             </div>
         """, unsafe_allow_html=True)
         
-    # 3. Code Examples
-    if parsed.get("code"):
-        st.markdown("### 💻 Code Example")
-        st.markdown(parsed["code"])
+    # 2. Main Answer
+    if parsed.get("answer"):
+        st.markdown(parsed["answer"])
+
+    # 3. Code Snippets
+    if parsed.get("code_snippets"):
+        for code in parsed["code_snippets"]:
+            st.code(code.get("code", ""), language=code.get("language", "text"))
+
+    # 4. Sources (Pill shaped inline chips)
+    active_sources = []
+    if sources:
+        st.markdown("<div style='font-size: 0.85rem; font-weight: 600; color: #333; margin-top: 15px; margin-bottom: 8px;'>📄 Sources</div>", unsafe_allow_html=True)
         
-    # Render Collapsible Source Cards at top layer
-    active_sources = render_source_chip(sources, developer_mode=False)
-    
-    # 4. More Details Expander (Nests all complex info)
-    has_details = parsed.get("explanation") or parsed.get("steps") or parsed.get("warnings") or parsed.get("related")
-    
-    if has_details:
-        with st.expander("🔍 More Details", expanded=False):
-            if parsed.get("explanation"):
-                st.markdown("**Detailed Explanation**")
-                st.markdown(parsed["explanation"])
-                
-            if parsed.get("steps"):
-                st.markdown("**Developer Actions**")
-                st.markdown(parsed["steps"])
-                
-            if parsed.get("warnings"):
-                st.markdown("**Edge Cases & Warnings**")
-                st.warning(parsed["warnings"], icon="⚠️")
-                
-            if parsed.get("related"):
-                st.markdown("**Related Documentation**")
-                st.markdown(parsed["related"])
+        sources_html = ""
+        for src in sources:
+            name = src.get("name", "Unknown Source")
+            url = src.get("url", "#")
+            active_sources.append(name)
+            sources_html += f"<a href='{url}' target='_blank' class='source-chip'>📄 {name} ↗</a>"
+            
+        st.markdown(sources_html, unsafe_allow_html=True)
+
+    # 5. Related Content
+    if parsed.get("related"):
+        st.markdown("<div style='font-size: 0.85rem; font-weight: 600; color: #333; margin-top: 15px; margin-bottom: 8px;'>Related</div>", unsafe_allow_html=True)
+        st.markdown(parsed["related"])
         
+    # 6. Action Bar (Flexbox layout)
+    st.markdown(f"""
+        <div class="action-buttons-wrapper">
+            <button class="action-btn" onclick="window.parent.postMessage({{type: 'copy', text: 'answer'}})">📋 Copy Answer</button>
+            <button class="action-btn" onclick="window.parent.postMessage({{type: 'share'}})">↗ Share</button>
+            <button class="action-btn" onclick="window.parent.postMessage({{type: 'helpful'}})">👍 Helpful</button>
+            <button class="action-btn" onclick="window.parent.postMessage({{type: 'unhelpful'}})">👎 Not Helpful</button>
+        </div>
+    """, unsafe_allow_html=True)
     
     return active_sources

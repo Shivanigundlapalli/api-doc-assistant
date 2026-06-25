@@ -435,5 +435,143 @@ div[data-testid="stChatInput"] textarea {
     margin-top: 2rem !important;
 }
 
+/* =========================================
+   Chat UI Overhaul (Mockup Match)
+   ========================================= */
+
+/* User Message Bubble */
+[data-testid="stChatMessage"][data-baseweb="block"]:has(div[data-testid="chatAvatarIcon-user"]) {
+    background-color: #FAFAFA !important;
+    border: 1px solid #FCA5A5 !important;
+    border-radius: 12px !important;
+    padding: 1.5rem !important;
+    margin-bottom: 1.5rem !important;
+}
+
+/* Agent Message Bubble */
+[data-testid="stChatMessage"][data-baseweb="block"]:has(div[data-testid="chatAvatarIcon-assistant"]) {
+    background-color: #FFFFFF !important;
+    border: 1px solid rgba(0,0,0,0.05) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03) !important;
+    border-radius: 12px !important;
+    padding: 1.5rem !important;
+    margin-bottom: 1.5rem !important;
+}
+
+/* Hide default avatars, we will custom style them or use native */
+[data-testid="chatAvatarIcon-user"] {
+    background-color: #E53E3E !important;
+    color: white !important;
+}
+
+[data-testid="chatAvatarIcon-assistant"] {
+    background-color: #891C1C !important;
+    color: white !important;
+}
+
+/* Horizontal Action Buttons Wrapper */
+.action-buttons-wrapper {
+    display: flex !important;
+    gap: 10px !important;
+    margin-top: 15px !important;
+    flex-wrap: wrap !important;
+}
+
+/* Action Button Styling */
+.action-btn {
+    border: 1px solid #FCA5A5 !important;
+    color: #891C1C !important;
+    background-color: transparent !important;
+    border-radius: 8px !important;
+    padding: 6px 14px !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    transition: all 0.2s ease !important;
+}
+
+.action-btn:hover {
+    background-color: rgba(229, 62, 62, 0.05) !important;
+    border-color: #E53E3E !important;
+}
+
+/* Inline Sources Chips */
+.source-chip {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    border: 1px solid rgba(0,0,0,0.1) !important;
+    border-radius: 8px !important;
+    padding: 6px 12px !important;
+    font-size: 0.8rem !important;
+    color: #333 !important;
+    background-color: #FFF !important;
+    margin-right: 8px !important;
+    margin-bottom: 8px !important;
+    text-decoration: none !important;
+}
+.source-chip:hover {
+    background-color: #F9F9F9 !important;
+}
+
+/* Input Area Container */
+.integrated-input-wrapper {
+    position: relative;
+    width: 100%;
+    margin-top: 2rem;
+}
+
+/* The native chat input container styling */
+[data-testid="stChatInput"] {
+    background-color: #FFFFFF !important;
+    border: 1px solid rgba(0,0,0,0.1) !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05) !important;
+    border-radius: 12px !important;
+    padding-left: 80px !important; /* Space for Attach/Voice */
+}
+
+/* Send Button inside Input */
+[data-testid="stChatInputSubmitButton"] {
+    background-color: #891C1C !important;
+    color: white !important;
+    border-radius: 8px !important;
+    width: 32px !important;
+    height: 32px !important;
+    margin-right: 8px !important;
+}
+[data-testid="stChatInputSubmitButton"] svg {
+    fill: white !important;
+}
+
+/* Floating Attach/Voice Icons */
+.integrated-icons {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 12px;
+    z-index: 50;
+}
+.icon-btn {
+    color: #666;
+    cursor: pointer;
+    background: #F4F4F4;
+    border-radius: 6px;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #E5E5E5;
+    transition: all 0.2s;
+}
+.icon-btn:hover {
+    background: #E5E5E5;
+    color: #333;
+}
+
 </style>
     """, unsafe_allow_html=True)
