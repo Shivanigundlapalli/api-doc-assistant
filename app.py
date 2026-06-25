@@ -167,8 +167,10 @@ if is_debug_mode():
 # Left Sidebar (approx 18% dictated by CSS width 320px)
 render_sidebar()
 
-# Split into Center (Main Chat - 57%) and Right (Context Panel - 25%)
-col_main, col_ctx = st.columns([70, 30], gap="large")
+# Split into Center (Main Chat - 55%) and Right (Context Panel - 25%)
+# Assuming sidebar is ~20%. So out of remaining 80%, we want 55 and 25.
+# 55 / 80 = 68.75%, 25 / 80 = 31.25%
+col_main, col_ctx = st.columns([68, 32], gap="large")
 
 with col_ctx:
     st.markdown("""
