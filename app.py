@@ -258,27 +258,27 @@ if query:
             
             # 5. Stream Response into Native UI
             with st.chat_message("assistant", avatar="🤖"):
-                    st.caption("✨ Generating structural response...")
-                    answer = st.write_stream(answer_stream)
-                    
-                    # After stream completes, we do not need to manually render the action buttons here
-                    # because st.rerun() will immediately trigger the history loop which parses and renders the beautiful components.
-                    
-                    if is_debug_mode():
-                        with st.expander("🔍 Query Telemetry (Admin)", expanded=False):
-                            st.caption(f"Retrieved {len(docs)} document chunks.")
-                            for i, doc in enumerate(docs):
-                                st.caption(f"**Chunk {i+1} Metadata:** {doc.metadata}")
+                st.caption("✨ Generating structural response...")
+                answer = st.write_stream(answer_stream)
                 
-                if "chat_history" not in st.session_state:
-                    st.session_state.chat_history = []
-                    
-                st.session_state.chat_history.append({
-                    "question": query, 
-                    "answer": answer,
-                    "sources": docs
-                })
+                # After stream completes, we do not need to manually render the action buttons here
+                # because st.rerun() will immediately trigger the history loop which parses and renders the beautiful components.
                 
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error during retrieval or answer generation: {e}")
+                if is_debug_mode():
+                    with st.expander("🔍 Query Telemetry (Admin)", expanded=False):
+                        st.caption(f"Retrieved {len(docs)} document chunks.")
+                        for i, doc in enumerate(docs):
+                            st.caption(f"**Chunk {i+1} Metadata:** {doc.metadata}")
+            
+            if "chat_history" not in st.session_state:
+                st.session_state.chat_history = []
+                
+            st.session_state.chat_history.append({
+                "question": query, 
+                "answer": answer,
+                "sources": docs
+            })
+            
+            st.rerun()
+        except Exception as e:
+            st.error(f"Error during retrieval or answer generation: {e}")
