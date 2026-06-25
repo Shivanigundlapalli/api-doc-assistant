@@ -216,48 +216,48 @@ if query:
     
     # 2. Guardrails Check
     with st.spinner("Analyzing query..."):
-            try:
-                if not check_guardrails(query):
-                    err_msg = "I can answer only questions related to the uploaded documentation."
-                    with st.chat_message("assistant", avatar="🤖"):
-                        st.markdown(err_msg)
-                    if "chat_history" not in st.session_state:
-                        st.session_state.chat_history = []
-                    st.session_state.chat_history.append({"question": query, "answer": err_msg, "sources": []})
-                    st.stop()
-            except Exception as e:
-                st.error(f"Error checking guardrails: {e}")
+        try:
+            if not check_guardrails(query):
+                err_msg = "I can answer only questions related to the uploaded documentation."
+                with st.chat_message("assistant", avatar="🤖"):
+                    st.markdown(err_msg)
+                if "chat_history" not in st.session_state:
+                    st.session_state.chat_history = []
+                st.session_state.chat_history.append({"question": query, "answer": err_msg, "sources": []})
+                st.stop()
+        except Exception as e:
+            st.error(f"Error checking guardrails: {e}")
+            st.stop()
+            
+    # 3. Query Rewriting
+    with st.spinner("Optimizing search..."):
+        try:
+            optimized_query = rewrite_query(query)
+            if optimized_query != query:
+                st.caption(f"Optimized search: *{optimized_query}*")
+        except Exception as e:
+            optimized_query = query
+            
+    # 4. Retrieval & Answer Generation
+    with st.spinner("Searching documentation..."):
+        try:
+            if not retriever:
+                st.error("Vector database is not initialized. Please add documents.")
                 st.stop()
                 
-        # 3. Query Rewriting
-        with st.spinner("Optimizing search..."):
-            try:
-                optimized_query = rewrite_query(query)
-                if optimized_query != query:
-                    st.caption(f"Optimized search: *{optimized_query}*")
-            except Exception as e:
-                optimized_query = query
+            if optimized_query in st.session_state.retrieval_cache:
+                raw_docs = st.session_state.retrieval_cache[optimized_query]
+            else:
+                raw_docs = retriever.invoke(optimized_query)
+                st.session_state.retrieval_cache[optimized_query] = raw_docs
                 
-        # 4. Retrieval & Answer Generation
-        with st.spinner("Searching documentation..."):
-            try:
-                if not retriever:
-                    st.error("Vector database is not initialized. Please add documents.")
-                    st.stop()
-                    
-                if optimized_query in st.session_state.retrieval_cache:
-                    raw_docs = st.session_state.retrieval_cache[optimized_query]
-                else:
-                    raw_docs = retriever.invoke(optimized_query)
-                    st.session_state.retrieval_cache[optimized_query] = raw_docs
-                    
-                docs = deduplicate_docs(raw_docs)
-                context = "\n\n".join([doc.page_content for doc in docs])
-                
-                answer_stream = generate_answer(optimized_query, context, memory=st.session_state.get("chat_history", []))
-                
-                # 5. Stream Response into Native UI
-                with st.chat_message("assistant", avatar="🤖"):
+            docs = deduplicate_docs(raw_docs)
+            context = "\n\n".join([doc.page_content for doc in docs])
+            
+            answer_stream = generate_answer(optimized_query, context, memory=st.session_state.get("chat_history", []))
+            
+            # 5. Stream Response into Native UI
+            with st.chat_message("assistant", avatar="🤖"):
                     st.caption("✨ Generating structural response...")
                     answer = st.write_stream(answer_stream)
                     
