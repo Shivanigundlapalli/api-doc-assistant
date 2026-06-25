@@ -31,4 +31,56 @@ def render_source_chip(sources: list, developer_mode: bool = False):
                     st.markdown(f"```text\n{doc.page_content}\n```")
             st.divider()
 
+            st.divider()
+
     return list(unique_sources.keys())
+
+def render_enterprise_answer(parsed: dict, sources: list):
+    """
+    Renders the parsed structured LLM response into an Enterprise SaaS layout.
+    """
+    # 1. Header & Confidence
+    if parsed.get("confidence"):
+        st.markdown(f"**Confidence:** {parsed['confidence']}")
+        
+    # 2. Quick Answer Card
+    if parsed.get("quick_answer"):
+        st.markdown(f"""
+            <div class="quick-answer-card">
+                <div class="qa-title">✅ Quick Answer</div>
+                <div>{parsed['quick_answer']}</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+    # 3. Code Examples
+    if parsed.get("code"):
+        st.markdown("### 💻 Code Example")
+        st.markdown(parsed["code"])
+        
+    # 4. Detailed Explanation
+    if parsed.get("explanation"):
+        with st.expander("▼ Detailed Explanation", expanded=False):
+            st.markdown(parsed["explanation"])
+            
+    # 5. Steps
+    if parsed.get("steps"):
+        st.markdown("### 🚀 Getting Started")
+        st.markdown(parsed["steps"])
+        
+    # 6. Warnings
+    if parsed.get("warnings"):
+        st.warning(parsed["warnings"], icon="⚠️")
+        
+    # 7. Action Bar
+    st.markdown("""
+        <div style="margin-top: 24px; display: flex; gap: 12px;">
+            <button class="btn-action">📋 Copy Answer</button>
+            <button class="btn-action">🔗 Share</button>
+            <button class="btn-action">⬇ Export PDF</button>
+            <button class="btn-action">👍</button>
+            <button class="btn-action">👎</button>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Render Sources natively
+    return render_source_chip(sources, developer_mode=False)

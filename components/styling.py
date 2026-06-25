@@ -10,23 +10,23 @@ def inject_custom_css():
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-    --bg-color: #FAFAFA;
-    --card-bg: #FFFFFF;
-    --secondary-bg: #F5F6F8;
-    --text-primary: #1A1A1A;
-    --text-secondary: #6B7280;
-    --border-color: #E8E8E8;
+    --bg-color: #0F172A;
+    --card-bg: #111827;
+    --secondary-bg: #1E293B;
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --border-color: #334155;
     
-    --primary-color: #8B1E2D; /* Deep Burgundy */
-    --primary-hover: #A52A3A;
-    --sidebar-grad-start: #5C0B14;
-    --sidebar-grad-end: #8B1E2D;
+    --primary-color: #2563EB;
+    --primary-hover: #3B82F6;
+    --sidebar-grad-start: #0F172A;
+    --sidebar-grad-end: #1E293B;
     
-    --success-color: #16A34A;
+    --success-color: #10B981;
     --warning-color: #F59E0B;
-    --danger-color: #DC2626;
+    --danger-color: #EF4444;
     
-    --shadow-card: 0 4px 20px rgba(0,0,0,0.06);
+    --shadow-card: 0 4px 20px rgba(0,0,0,0.2);
     --border-radius-base: 16px;
     --anim-speed: 200ms;
 }
@@ -225,5 +225,22 @@ div[data-testid="stExpander"] {
     background: var(--card-bg) !important;
     margin-top: 1rem;
 }
+
+/* Quick Answer Card */
+.quick-answer-card {
+    background: linear-gradient(145deg, rgba(37, 99, 235, 0.1), rgba(17, 24, 39, 1));
+    border: 1px solid var(--primary-color);
+    border-radius: var(--border-radius-base);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 0 15px rgba(37, 99, 235, 0.15);
+}
+.qa-title {
+    color: var(--primary-color);
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
 </style>
     """, unsafe_allow_html=True)

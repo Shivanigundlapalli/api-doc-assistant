@@ -224,20 +224,13 @@ with col_main:
         with st.chat_message("user"):
             st.markdown(msg["question"])
         with st.chat_message("assistant", avatar="🤖"):
-            st.markdown(msg["answer"])
-            if "sources" in msg and msg["sources"]:
-                # The render_source_chip now returns the active source names
-                active_sources = render_source_chip(msg["sources"], False)
-                
-                # Mock Action buttons requested in the prompt
-                st.markdown("""
-                    <div style="margin-top: 15px; display: flex; gap: 10px;">
-                        <button class="btn-action">📋 Copy</button>
-                        <button class="btn-action">💻 Examples</button>
-                        <button class="btn-action">🔍 View Source</button>
-                        <button class="btn-action">📥 Export</button>
-                    </div>
-                """, unsafe_allow_html=True)
+            from utils.parser import parse_enterprise_answer
+            from components.chat_interface import render_enterprise_answer
+            
+            parsed = parse_enterprise_answer(msg["answer"])
+            active_sources = render_enterprise_answer(parsed, msg.get("sources", []))
+            if active_sources:
+                st.session_state.active_sources = active_sources
 
     # Input Actions Mockup (Attach File / Voice) above the native input
     st.markdown("""
@@ -302,26 +295,17 @@ with col_main:
                 
                 # 5. Stream Response into Native UI
                 with st.chat_message("assistant", avatar="🤖"):
+                    st.caption("✨ Generating structural response...")
                     answer = st.write_stream(answer_stream)
                     
-                    if docs:
-                        st.session_state.active_sources = render_source_chip(docs, False)
-                        
-                    # Action buttons for the live response
-                    st.markdown("""
-                        <div style="margin-top: 15px; display: flex; gap: 10px;">
-                            <button class="btn-action">📋 Copy</button>
-                            <button class="btn-action">💻 Examples</button>
-                            <button class="btn-action">🔍 View Source</button>
-                            <button class="btn-action">📥 Export</button>
-                        </div>
-                    """, unsafe_allow_html=True)
+                    # After stream completes, we do not need to manually render the action buttons here
+                    # because st.rerun() will immediately trigger the history loop which parses and renders the beautiful components.
                     
-                    # Telemetry for the live response
-                    with st.expander("🔍 Query Telemetry (Admin)", expanded=False):
-                        st.caption(f"Retrieved {len(docs)} document chunks.")
-                        for i, doc in enumerate(docs):
-                            st.caption(f"**Chunk {i+1} Metadata:** {doc.metadata}")
+                    if is_debug_mode():
+                        with st.expander("🔍 Query Telemetry (Admin)", expanded=False):
+                            st.caption(f"Retrieved {len(docs)} document chunks.")
+                            for i, doc in enumerate(docs):
+                                st.caption(f"**Chunk {i+1} Metadata:** {doc.metadata}")
                 
                 if "chat_history" not in st.session_state:
                     st.session_state.chat_history = []
