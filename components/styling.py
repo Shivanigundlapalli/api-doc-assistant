@@ -517,20 +517,16 @@ div[data-testid="stChatInput"] textarea {
     background-color: #F9F9F9 !important;
 }
 
-/* Input Area Container */
-.integrated-input-wrapper {
-    position: relative;
-    width: 100%;
-    margin-top: 2rem;
-}
-
 /* The native chat input container styling */
 [data-testid="stChatInput"] {
+    background-color: transparent !important;
+}
+
+[data-testid="stChatInput"] > div {
     background-color: #FFFFFF !important;
     border: 1px solid rgba(0,0,0,0.1) !important;
     box-shadow: 0 4px 20px rgba(0,0,0,0.05) !important;
     border-radius: 12px !important;
-    padding-left: 80px !important; /* Space for Attach/Voice */
 }
 
 /* Send Button inside Input */
@@ -546,31 +542,20 @@ div[data-testid="stChatInput"] textarea {
     fill: white !important;
 }
 
-/* Floating Attach/Voice Icons */
-.integrated-icons {
-    position: absolute;
-    left: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-    display: flex;
-    gap: 12px;
-    z-index: 50;
+/* Floating Native Action Buttons (Attach/Voice) */
+/* We target the buttons right above the chat input to give them the requested red style */
+div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
+    border: 1px solid rgba(229, 62, 62, 0.3) !important;
+    background-color: #FAFAFA !important;
+    color: #891C1C !important;
+    border-radius: 8px !important;
+    padding: 4px 12px !important;
+    transition: all 0.2s ease !important;
 }
-.icon-btn {
-    color: #666;
-    cursor: pointer;
-    background: #F4F4F4;
-    border-radius: 6px;
-    padding: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #E5E5E5;
-    transition: all 0.2s;
-}
-.icon-btn:hover {
-    background: #E5E5E5;
-    color: #333;
+
+div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
+    border: 1px solid #E53E3E !important;
+    background-color: rgba(229, 62, 62, 0.05) !important;
 }
 
 </style>

@@ -195,19 +195,16 @@ if st.session_state.pending_query:
     query = st.session_state.pending_query
     st.session_state.pending_query = None
 else:
-    # Wrap everything in a container to absolute position the buttons over the input
-    st.markdown('<div class="integrated-input-wrapper">', unsafe_allow_html=True)
+    # Inject native floating buttons for Attach and Voice using CSS positioning
+    st.markdown('<div class="floating-icons-anchor"></div>', unsafe_allow_html=True)
     
-    # Absolute positioned HTML buttons container
-    st.markdown("""
-        <div class="integrated-icons">
-            <div class="icon-btn" onclick="alert('Attach file feature coming soon!')">📎</div>
-            <div class="icon-btn" onclick="alert('Voice input feature coming soon!')">🎤</div>
-        </div>
-    """, unsafe_allow_html=True)
+    col1, col2, col_empty = st.columns([1, 1, 8])
+    with col1:
+        st.button("📎", key="attach_btn", help="Attach file")
+    with col2:
+        st.button("🎤", key="voice_btn", help="Voice input")
 
     query = st.chat_input("Ask anything about your API documentation...")
-    st.markdown('</div>', unsafe_allow_html=True)
 
 if query:
     # 1. Render User Message
