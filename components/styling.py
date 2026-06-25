@@ -10,23 +10,23 @@ def inject_custom_css():
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-    --bg-color: #0F172A;
-    --card-bg: #111827;
-    --secondary-bg: #1E293B;
-    --text-primary: #F8FAFC;
-    --text-secondary: #94A3B8;
-    --border-color: #334155;
+    --bg-color: #FFFBF5;
+    --card-bg: #FFFFFF;
+    --secondary-bg: #FEE2E2;
+    --text-primary: #1F1F1F;
+    --text-secondary: #6B7280;
+    --border-color: #E5E7EB;
     
-    --primary-color: #2563EB;
-    --primary-hover: #3B82F6;
-    --sidebar-grad-start: #111827;
-    --sidebar-grad-end: #111827;
+    --primary-color: #8B1E1E;
+    --primary-hover: #A71D1D;
+    --sidebar-grad-start: #8B1E1E;
+    --sidebar-grad-end: #8B1E1E;
     
-    --success-color: #10B981;
+    --success-color: #16A34A;
     --warning-color: #F59E0B;
-    --danger-color: #EF4444;
+    --danger-color: #DC2626;
     
-    --shadow-card: 0 4px 20px rgba(0,0,0,0.2);
+    --shadow-card: 0 4px 12px rgba(0,0,0,0.04);
     --border-radius-base: 16px;
     --anim-speed: 200ms;
 }
@@ -132,13 +132,13 @@ section[data-testid="stSidebar"] hr {
 
 /* Code Blocks */
 .stCodeBlock {
-    background-color: #0F172A !important;
-    border-radius: 8px; /* Slightly smaller radius for inner code blocks */
+    background-color: #F8FAFC !important;
+    border-radius: 8px;
     margin: 1rem 0;
     border: 1px solid var(--border-color);
 }
 .stCodeBlock code {
-    color: #F8FAFC !important;
+    color: var(--text-primary) !important;
 }
 
 /* Search / Chat Input Sticky Bottom */
@@ -156,12 +156,12 @@ div[data-testid="stChatInput"]:focus-within {
 
 /* Custom Buttons (Pills / Actions) */
 .btn-action {
-    background: linear-gradient(90deg, #2563EB, #3B82F6);
-    border: none;
+    background-color: #FFFFFF;
+    border: 1px solid var(--primary-color);
     border-radius: 8px;
     padding: 0.4rem 0.8rem;
     font-size: 0.85rem;
-    color: #FFFFFF;
+    color: var(--primary-color);
     cursor: pointer;
     transition: all var(--anim-speed) ease;
     display: inline-flex;
@@ -170,9 +170,9 @@ div[data-testid="stChatInput"]:focus-within {
     margin-right: 0.5rem;
 }
 .btn-action:hover {
-    background: linear-gradient(90deg, #3B82F6, #2563EB);
+    background-color: var(--primary-color);
     color: #FFFFFF;
-    box-shadow: 0 0 10px rgba(37, 99, 235, 0.4);
+    box-shadow: 0 0 10px rgba(139, 30, 30, 0.2);
 }
 
 /* Context Panel (Right Column) */
@@ -228,12 +228,12 @@ div[data-testid="stExpander"] {
 
 /* Quick Answer Card */
 .quick-answer-card {
-    background: linear-gradient(145deg, rgba(37, 99, 235, 0.1), rgba(17, 24, 39, 1));
-    border: 1px solid var(--primary-color);
+    background-color: var(--card-bg);
+    border: 2px solid var(--primary-color);
     border-radius: var(--border-radius-base);
     padding: 1.5rem;
     margin-bottom: 1.5rem;
-    box-shadow: 0 0 15px rgba(37, 99, 235, 0.15);
+    box-shadow: 0 4px 15px rgba(139, 30, 30, 0.08);
 }
 .qa-title {
     color: var(--primary-color);
