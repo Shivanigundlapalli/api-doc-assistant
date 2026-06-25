@@ -12,8 +12,10 @@ def parse_enterprise_answer(markdown_text: str) -> dict:
         "code_example": "",
         "developer_actions": "",
         "edge_cases": "",
+        "source_snippets": "",
         "sources_text": "",
         "related": "",
+        "related_questions": "",
         "explanation": "" # Fallback
     }
     
@@ -42,15 +44,19 @@ def parse_enterprise_answer(markdown_text: str) -> dict:
             parsed["developer_actions"] = content
         elif "EDGE_CASES" in header or "WARNINGS" in header:
             parsed["edge_cases"] = content
+        elif "SOURCE_SNIPPETS" in header:
+            parsed["source_snippets"] = content
         elif "SOURCES" in header:
             parsed["sources_text"] = content
-        elif "RELATED_DOCUMENTATION" in header or "RELATED" in header:
+        elif "RELATED_DOCUMENTATION" in header or "RELATED" in header and "QUESTIONS" not in header:
             parsed["related"] = content
+        elif "RELATED_QUESTIONS" in header:
+            parsed["related_questions"] = content
         else:
             # If it's a completely unknown header, dump it into explanation
             parsed["explanation"] += f"\n\n**{header}**\n{content}"
             
-    # Fallback: if parsing completely failed, dump it all into explanation
+    # Fallback: if parsing completely failed
     if not any([parsed["quick_answer"], parsed["key_details"], parsed["code_example"], parsed["developer_actions"], parsed["edge_cases"]]):
         parsed["explanation"] = markdown_text
         
