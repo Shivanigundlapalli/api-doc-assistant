@@ -171,86 +171,39 @@ if is_debug_mode():
 # Left Sidebar (approx 18% dictated by CSS width 320px)
 render_sidebar()
 
-# Split into Center (Main Chat - 55%) and Right (Context Panel - 25%)
-# Assuming sidebar is ~20%. So out of remaining 80%, we want 55 and 25.
-# 55 / 80 = 68.75%, 25 / 80 = 31.25%
-col_main, col_ctx = st.columns([68, 32], gap="large")
+# ==========================
+# Main Chat Interface
+# ==========================
 
-with col_ctx:
-    st.markdown("""
-        <div class="context-panel">
-            <div class="context-header">Sources</div>
-    """, unsafe_allow_html=True)
-    
-    if docs_files:
-        for file in docs_files:
-            st.markdown(f"""
-                <div class="context-item">
-                    <span class="context-icon">📄</span> {file}
-                </div>
-            """, unsafe_allow_html=True)
-    else:
-        st.caption("No documents uploaded.")
+if not st.session_state.chat_history:
+    render_hero()
+
+# Chat History
+for i, msg in enumerate(st.session_state.get("chat_history", [])):
+    with st.chat_message("user"):
+        st.markdown(msg["question"])
+    with st.chat_message("assistant", avatar="🤖"):
+        from utils.parser import parse_enterprise_answer
+        from components.chat_interface import render_enterprise_answer
         
-    st.divider()
-    
-    st.markdown("<div class='context-header'>Code Examples</div>", unsafe_allow_html=True)
-    st.markdown("""
-        <div class="context-item"><span class="context-icon">🐍</span> Python</div>
-        <div class="context-item"><span class="context-icon">🟨</span> JavaScript</div>
-        <div class="context-item"><span class="context-icon">⚡</span> cURL</div>
-    """, unsafe_allow_html=True)
-    
-    st.divider()
-    
-    st.markdown("<div class='context-header'>Related Questions</div>", unsafe_allow_html=True)
-    st.markdown("""
-        <div class="context-item">How do I generate an API key?</div>
-        <div class="context-item">Why am I getting 401?</div>
-        <div class="context-item">What are the rate limits?</div>
-    """, unsafe_allow_html=True)
-    
-    st.divider()
-    
-    st.markdown("<div class='context-header'>Document Sections</div>", unsafe_allow_html=True)
-    st.markdown("""
-        <div class="context-item">Authentication</div>
-        <div class="context-item">Rate Limits</div>
-        <div class="context-item">Error Codes</div>
-    """, unsafe_allow_html=True)
-        
-    st.markdown("</div>", unsafe_allow_html=True)
+        parsed = parse_enterprise_answer(msg["answer"])
+        active_sources = render_enterprise_answer(parsed, msg.get("sources", []), msg_index=i)
+        if active_sources:
+            st.session_state.active_sources = active_sources
 
-with col_main:
-    if not st.session_state.chat_history:
-        render_hero()
+if st.session_state.pending_query:
+    query = st.session_state.pending_query
+    st.session_state.pending_query = None
+else:
+    query = st.chat_input("Ask anything about your API documentation...")
 
-    # Chat History
-    for i, msg in enumerate(st.session_state.get("chat_history", [])):
-        with st.chat_message("user"):
-            st.markdown(msg["question"])
-        with st.chat_message("assistant", avatar="🤖"):
-            from utils.parser import parse_enterprise_answer
-            from components.chat_interface import render_enterprise_answer
-            
-            parsed = parse_enterprise_answer(msg["answer"])
-            active_sources = render_enterprise_answer(parsed, msg.get("sources", []), msg_index=i)
-            if active_sources:
-                st.session_state.active_sources = active_sources
-
-    if st.session_state.pending_query:
-        query = st.session_state.pending_query
-        st.session_state.pending_query = None
-    else:
-        query = st.chat_input("Ask anything about your API documentation...")
-
-    if query:
-        # 1. Render User Message
-        with st.chat_message("user"):
-            st.markdown(query)
-        
-        # 2. Guardrails Check
-        with st.spinner("Analyzing query..."):
+if query:
+    # 1. Render User Message
+    with st.chat_message("user"):
+        st.markdown(query)
+    
+    # 2. Guardrails Check
+    with st.spinner("Analyzing query..."):
             try:
                 if not check_guardrails(query):
                     err_msg = "I can answer only questions related to the uploaded documentation."
