@@ -71,6 +71,10 @@ if "pending_query" not in st.session_state:
     st.session_state.pending_query = None
 if "active_sources" not in st.session_state:
     st.session_state.active_sources = []
+if "pinned_chats" not in st.session_state:
+    st.session_state.pinned_chats = []
+if "collections" not in st.session_state:
+    st.session_state.collections = []
 
 # Handle Vector DB Initialization
 docs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs")
