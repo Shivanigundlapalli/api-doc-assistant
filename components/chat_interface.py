@@ -91,35 +91,32 @@ def render_enterprise_answer(parsed: dict, sources: list, msg_index: int = 0):
     # 5. Action Bar (Functional Streamlit Buttons)
     st.write("") # Spacing
     
-    # Custom CSS for ghost buttons
-    st.markdown("""
-        <style>
-        div[data-testid="column"] button {
-            border: none !important;
-            background-color: transparent !important;
-            color: var(--text-secondary) !important;
-            padding: 0.2rem 0.5rem !important;
-            transition: all 0.2s ease;
-        }
-        div[data-testid="column"] button:hover {
-            color: var(--primary-color) !important;
-            background-color: rgba(0,0,0,0.05) !important;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+    # We use empty st.columns to simulate the toolbar.
+    # The CSS we injected in styling.py targeting `stHorizontalBlock` will format these.
+    action_cols = st.columns([1.2, 1.2, 1.2, 1.2, 8])
+    
+    with action_cols[0]:
+        if st.button("📋 Copy", key=f"copy_{msg_index}", help="Copy Answer"):
+            st.toast("Copied ✓", icon="✅")
+    
+    with action_cols[1]:
+        # Share Dropdown
+        with st.popover("↗ Share", help="Share Menu"):
+            if st.button("Copy Link", key=f"share_link_{msg_index}"):
+                st.toast("Link copied!", icon="✅")
+            if st.button("Copy Markdown", key=f"share_md_{msg_index}"):
+                st.toast("Markdown copied!", icon="✅")
+            if st.button("Share to X", key=f"share_x_{msg_index}"):
+                st.toast("Opening X...", icon="🐦")
+            if st.button("Share to LinkedIn", key=f"share_in_{msg_index}"):
+                st.toast("Opening LinkedIn...", icon="💼")
 
-    cols = st.columns([1, 1, 0.5, 0.5, 10])
-    with cols[0]:
-        if st.button("📋 Copy Answer", key=f"copy_{msg_index}"):
-            st.toast("Answer copied to clipboard!")
-    with cols[1]:
-        if st.button("🔗 Share", key=f"share_{msg_index}"):
-            st.toast("Share link generated!")
-    with cols[2]:
-        if st.button("👍", key=f"up_{msg_index}"):
-            st.toast("Thanks for the positive feedback!")
-    with cols[3]:
-        if st.button("👎", key=f"down_{msg_index}"):
-            st.toast("Feedback recorded.")
+    with action_cols[2]:
+        if st.button("👍 Helpful", key=f"up_{msg_index}"):
+            st.toast("👍 Thanks for your feedback")
+            
+    with action_cols[3]:
+        if st.button("👎 Not Helpful", key=f"down_{msg_index}"):
+            st.toast("👎 Feedback recorded")
     
     return active_sources

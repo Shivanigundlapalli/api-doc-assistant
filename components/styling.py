@@ -242,5 +242,104 @@ div[data-testid="stExpander"] {
     font-size: 1.1rem;
 }
 
+/* =========================================
+   UI SaaS Overrides
+   ========================================= */
+
+/* 1. Feedback Toast (Bottom Center) */
+[data-testid="stToastContainer"] {
+    top: auto !important;
+    bottom: 2rem !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    right: auto !important;
+    align-items: center !important;
+    z-index: 9999 !important;
+}
+
+[data-testid="stToast"] {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--primary-color) !important;
+    border-radius: var(--border-radius-base) !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
+    padding: 12px 20px !important;
+}
+
+[data-testid="stToast"] > div {
+    color: var(--text-primary) !important;
+    font-weight: 500 !important;
+    text-align: center !important;
+}
+
+/* 2. Action Toolbar Buttons (Ghost style) */
+.action-toolbar-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+div[data-testid="stHorizontalBlock"] > div.action-button-col {
+    min-width: fit-content !important;
+    flex: 0 1 auto !important;
+}
+
+div[data-testid="stHorizontalBlock"] > div.action-button-col button[data-testid="baseButton-secondary"] {
+    height: 40px !important;
+    border-radius: 12px !important;
+    padding: 0 16px !important;
+    border: none !important;
+    background-color: transparent !important;
+    color: var(--text-secondary) !important;
+    font-weight: 500 !important;
+    box-shadow: none !important;
+    transition: all 0.2s ease !important;
+}
+
+div[data-testid="stHorizontalBlock"] > div.action-button-col button[data-testid="baseButton-secondary"]:hover {
+    color: var(--primary-color) !important;
+    background-color: rgba(139, 30, 45, 0.05) !important;
+}
+
+/* 3. Integrated Input Bar */
+/* Move the Attach and Voice popovers into the chat input */
+.integrated-input-container {
+    position: relative;
+    width: 100%;
+}
+
+.integrated-input-buttons {
+    position: absolute;
+    bottom: 6px;
+    left: 10px;
+    z-index: 999;
+    display: flex;
+    gap: 4px;
+}
+
+.integrated-input-buttons button[data-testid="baseButton-secondary"] {
+    height: 36px !important;
+    width: 36px !important;
+    padding: 0 !important;
+    border-radius: 8px !important;
+    border: none !important;
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    box-shadow: none !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.integrated-input-buttons button[data-testid="baseButton-secondary"]:hover {
+    background-color: var(--secondary-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Push text inside chat input to make room for absolute buttons */
+div[data-testid="stChatInput"] textarea {
+    padding-left: 90px !important;
+}
+
 </style>
     """, unsafe_allow_html=True)

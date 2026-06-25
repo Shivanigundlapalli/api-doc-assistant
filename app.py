@@ -234,27 +234,33 @@ with col_main:
             if active_sources:
                 st.session_state.active_sources = active_sources
 
-    # Functional Attach and Voice Buttons using Streamlit Popovers
-    action_col1, action_col2, _ = st.columns([1, 1, 8])
-    with action_col1:
-        with st.popover("📎 Attach", help="Attach documentation"):
-            uploaded_file = st.file_uploader("Upload a file", label_visibility="collapsed")
-            if uploaded_file:
-                st.success(f"{uploaded_file.name} attached!")
-    with action_col2:
-        with st.popover("🎤 Voice", help="Voice input"):
-            if hasattr(st, 'audio_input'):
-                audio_val = st.audio_input("Record voice", label_visibility="collapsed")
-                if audio_val:
-                    st.success("Audio recorded!")
-            else:
-                st.info("Voice recording requires Streamlit >= 1.36")
-
     if st.session_state.pending_query:
         query = st.session_state.pending_query
         st.session_state.pending_query = None
     else:
+        # Wrap everything in a container to absolute position the buttons
+        st.markdown('<div class="integrated-input-container">', unsafe_allow_html=True)
+        
+        # Absolute positioned buttons container
+        st.markdown('<div class="integrated-input-buttons">', unsafe_allow_html=True)
+        btn_cols = st.columns([1, 1])
+        with btn_cols[0]:
+            with st.popover("📎", help="Attach documentation"):
+                uploaded_file = st.file_uploader("Upload a file", label_visibility="collapsed")
+                if uploaded_file:
+                    st.success(f"{uploaded_file.name} attached!")
+        with btn_cols[1]:
+            with st.popover("🎤", help="Voice input"):
+                if hasattr(st, 'audio_input'):
+                    audio_val = st.audio_input("Record voice", label_visibility="collapsed")
+                    if audio_val:
+                        st.success("Audio recorded!")
+                else:
+                    st.info("Voice recording requires Streamlit >= 1.36")
+        st.markdown('</div>', unsafe_allow_html=True)
+
         query = st.chat_input("Ask anything about your API documentation...")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     if query:
         # 1. Render User Message
