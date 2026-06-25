@@ -15,8 +15,8 @@ def parse_enterprise_answer(markdown_text: str) -> dict:
         "related": ""
     }
     
-    # Split the text by headers
-    sections = re.split(r'(?m)^###\s+', markdown_text)
+    # Split the text by headers (handle ##, ###, ####)
+    sections = re.split(r'(?m)^#{2,4}\s+', markdown_text)
     
     # The first split might be empty or preamble, so we iterate
     for section in sections:
@@ -24,7 +24,8 @@ def parse_enterprise_answer(markdown_text: str) -> dict:
             continue
             
         lines = section.split('\n', 1)
-        header = lines[0].strip().upper()
+        # Normalize header: uppercase and replace spaces with underscores
+        header = lines[0].strip().upper().replace(" ", "_")
         content = lines[1].strip() if len(lines) > 1 else ""
         
         if "CONFIDENCE" in header:
