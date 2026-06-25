@@ -1,6 +1,6 @@
 import streamlit as st
 
-def render_sidebar(total_docs, total_chunks):
+def render_sidebar():
     """
     Renders the modern sidebar (Burgundy Edition).
     """

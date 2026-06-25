@@ -1,15 +1,16 @@
 import streamlit as st
 import os
 from dotenv import load_dotenv
+load_dotenv()
 
+from utils.logger import get_logger
+from config import is_debug_mode, show_admin_panel, get_google_api_key, get_openai_api_key, get_langsmith_key
 from utils.startup import validate_environment
 
 # Run validation before importing other heavy local modules
 validate_environment()
 
-# Load configuration and tracing
-from dotenv import load_dotenv
-load_dotenv()
+logger = get_logger("app")
 
 # Map Streamlit Secrets to os.environ for Cloud Deployment (e.g. for LangSmith)
 secret_keys = [
@@ -75,22 +76,47 @@ if "active_sources" not in st.session_state:
 docs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs")
 init_logs = []
 
-with st.spinner("Initializing Vector Database..."):
-    try:
+try:
+    get_google_api_key()
+    gemini_loaded = True
+except Exception as e:
+    gemini_loaded = False
+    logger.error(f"Failed to load Gemini key: {e}")
+
+openai_loaded = bool(get_openai_api_key())
+langsmith_loaded = bool(get_langsmith_key())
+
+is_cloud = (
+    "STREAMLIT_RUNTIME_ENV" in os.environ or 
+    os.environ.get("USER") == "appuser" or
+    "mount/src" in __file__ or
+    "streamlit" in os.environ.get("HOSTNAME", "").lower()
+)
+env_name = "Streamlit Cloud" if is_cloud else "Local"
+
+try:
+    if not gemini_loaded:
+        st.error("Missing required configuration. Please add your API keys in Streamlit Secrets.")
+        st.stop()
+        
+    with st.spinner("Preparing documentation index..." if not is_debug_mode() else "Initializing Vector Database..."):
         # Check if docs directory exists
         if not os.path.exists(docs_dir):
-            st.error(f"Critical Error: Documentation directory missing at {docs_dir}")
+            logger.error(f"Documentation directory missing at {docs_dir}")
+            st.error("Critical Error: Documentation directory missing.")
             st.stop()
             
         docs_files = [f for f in os.listdir(docs_dir) if os.path.isfile(os.path.join(docs_dir, f))]
         total_docs = len(docs_files)
         
         if total_docs == 0:
-            st.error("Critical Error: No documentation files found in 'docs/' directory.")
+            logger.error("No documentation files found in 'docs/' directory.")
+            st.error("Critical Error: No documentation files found.")
             st.stop()
             
         if st.session_state.rebuild_db:
             init_logs.append("Force rebuilding database...")
+            logger.info("Force rebuilding vector database.")
             docs = load_documents(docs_dir)
             chunks = split_documents(docs)
             vector_store = build_vector_store(chunks)
@@ -100,11 +126,13 @@ with st.spinner("Initializing Vector Database..."):
             vector_store = initialize_vector_store()
             if vector_store is None:
                 init_logs.append("Database missing or empty. Rebuilding...")
+                logger.info("Database missing or empty. Rebuilding vector store...")
                 docs = load_documents(docs_dir)
                 chunks = split_documents(docs)
                 vector_store = build_vector_store(chunks)
             else:
                 init_logs.append("Successfully loaded existing vector database.")
+                logger.info("Successfully loaded existing vector database.")
 
         retriever = get_retriever(vector_store) if vector_store else None
         total_chunks = vector_store._collection.count() if vector_store else 0
@@ -112,54 +140,32 @@ with st.spinner("Initializing Vector Database..."):
         init_logs.append(f"Loaded documents: {total_docs}")
         init_logs.append(f"Vector count: {total_chunks}")
         init_logs.append("Retriever initialized successfully.")
-        
-    except Exception as e:
-        st.error(f"Failed to initialize vector database: {e}")
-        vector_store = None
-        retriever = None
-        total_docs = 0
-        total_chunks = 0
-        docs_files = []
+        logger.info(f"Retriever initialized. Docs: {total_docs}, Vectors: {total_chunks}")
 
-# Startup Diagnostics Panel (Collapsible)
-with st.expander("🛠️ Startup Diagnostics & Telemetry", expanded=True):
-    from config import get_openai_api_key, get_langsmith_key, get_google_api_key
-    
-    try:
-        get_google_api_key()
-        gemini_loaded = True
-    except Exception:
-        gemini_loaded = False
-        
-    openai_loaded = bool(get_openai_api_key())
-    langsmith_loaded = bool(get_langsmith_key())
-    
-    # Streamlit Cloud runs containers as 'appuser' and uses specific hostnames
-    is_cloud = (
-        "STREAMLIT_RUNTIME_ENV" in os.environ or 
-        os.environ.get("USER") == "appuser" or
-        "mount/src" in __file__ or
-        "streamlit" in os.environ.get("HOSTNAME", "").lower()
-    )
-    env_name = "Streamlit Cloud" if is_cloud else "Local"
-    
-    st.write(f"**Running Environment:** {env_name}")
-    st.write(f"**Gemini Key Loaded:** {gemini_loaded}")
-    st.write(f"**OpenAI Key Loaded:** {openai_loaded}")
-    st.write(f"**LangSmith Key Loaded:** {langsmith_loaded}")
-    
-    for log in init_logs:
-        st.text(log)
-
-if not gemini_loaded:
-    st.error("Missing required configuration. Please add your API keys in Streamlit Secrets.")
+except Exception as e:
+    logger.error(f"Global exception during initialization: {e}\n{traceback.format_exc()}")
+    st.error("Something went wrong. Please try again.")
     st.stop()
+
+# Admin Dashboard
+from components.admin import render_admin_dashboard
+render_admin_dashboard(total_docs, total_chunks, gemini_loaded, openai_loaded, langsmith_loaded, env_name)
+
+# Startup Diagnostics Panel (Collapsible - Only if DEBUG is True)
+if is_debug_mode():
+    with st.expander("🛠️ Startup Diagnostics & Telemetry (DEBUG MODE)", expanded=True):
+        st.write(f"**Running Environment:** {env_name}")
+        st.write(f"**Gemini Key Loaded:** {gemini_loaded}")
+        st.write(f"**OpenAI Key Loaded:** {openai_loaded}")
+        st.write(f"**LangSmith Key Loaded:** {langsmith_loaded}")
+        for log in init_logs:
+            st.text(log)
 
 # ==========================
 # UI Layout
 # ==========================
 # Left Sidebar (approx 18% dictated by CSS width 320px)
-render_sidebar(total_docs, total_chunks)
+render_sidebar()
 
 # Split into Center (Main Chat - 57%) and Right (Context Panel - 25%)
 col_main, col_ctx = st.columns([70, 30], gap="large")

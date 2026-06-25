@@ -60,3 +60,15 @@ def get_ollama_model() -> str:
 def use_ollama_fallback() -> bool:
     """Checks if Ollama should be used as a fallback."""
     return get_config("USE_OLLAMA_FALLBACK", "false").lower() == "true"
+
+def is_debug_mode() -> bool:
+    """Checks if the application is running in DEBUG mode."""
+    return get_config("DEBUG", "False").lower() == "true"
+
+def show_admin_panel() -> bool:
+    """Checks if the Admin Dashboard should be accessible."""
+    return get_config("SHOW_ADMIN_PANEL", "False").lower() == "true"
+
+def is_logging_enabled() -> bool:
+    """Checks if file logging is enabled."""
+    return get_config("ENABLE_LOGGING", "True").lower() == "true"
