@@ -22,15 +22,13 @@ def render_source_chip(sources: list, developer_mode: bool = False):
     with st.expander(f"📄 Sources ({len(unique_sources)})", expanded=False):
         for src_name, chunks in unique_sources.items():
             st.markdown(f"**{src_name}**")
+            st.caption(f"{len(chunks)} relevant sections retrieved • [View Source]")
+            
             if developer_mode:
                 for i, doc in enumerate(chunks):
                     st.caption(f"Chunk {i+1}")
                     st.json(doc.metadata)
                     st.markdown(f"```text\n{doc.page_content}\n```")
-            else:
-                for doc in chunks:
-                    safe_content = doc.page_content.replace('<', '&lt;').replace('>', '&gt;')
-                    st.markdown(f"```text\n{safe_content}\n```")
             st.divider()
 
     return list(unique_sources.keys())
