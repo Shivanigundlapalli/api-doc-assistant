@@ -341,5 +341,99 @@ div[data-testid="stChatInput"] textarea {
     padding-left: 90px !important;
 }
 
+/* =========================================
+   Professional Sidebar Redesign
+   ========================================= */
+
+[data-testid="stSidebar"] {
+    background-color: #7F1D1D !important;
+    border-right: none !important;
+}
+
+[data-testid="stSidebar"] * {
+    color: #FFFFFF !important;
+}
+
+/* Sidebar Search Input */
+[data-testid="stSidebar"] div[data-baseweb="input"] {
+    background-color: rgba(0,0,0,0.15) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 8px !important;
+}
+
+[data-testid="stSidebar"] div[data-baseweb="input"]:focus-within {
+    border: 1px solid #FCA5A5 !important;
+}
+
+[data-testid="stSidebar"] input {
+    color: #FFFFFF !important;
+}
+
+/* Sidebar New Chat Button */
+[data-testid="stSidebar"] button[data-testid="baseButton-secondary"] {
+    background-color: #891C1C !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    color: #FFFFFF !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+[data-testid="stSidebar"] button[data-testid="baseButton-secondary"]:hover {
+    background-color: rgba(255,255,255,0.1) !important;
+    border-color: #FCA5A5 !important;
+}
+
+/* Sidebar Custom Links & Elements */
+.sidebar-group-header {
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    color: #FCA5A5 !important;
+    text-transform: uppercase !important;
+    margin-top: 1.5rem !important;
+    margin-bottom: 0.5rem !important;
+    letter-spacing: 0.05em !important;
+}
+
+.sidebar-item {
+    font-size: 0.85rem !important;
+    padding: 0.4rem 0.5rem !important;
+    border-radius: 6px !important;
+    color: rgba(255,255,255,0.85) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    cursor: pointer !important;
+    transition: background 0.2s ease !important;
+    margin-bottom: 0.2rem !important;
+}
+
+.sidebar-item:hover {
+    background-color: rgba(0,0,0,0.1) !important;
+    color: #FFFFFF !important;
+}
+
+.sidebar-item-icon {
+    font-size: 0.9rem !important;
+    opacity: 0.8 !important;
+}
+
+.sidebar-item-right {
+    margin-left: auto !important;
+    font-size: 0.75rem !important;
+    color: #FCA5A5 !important;
+}
+
+/* Bottom Nav Container */
+.sidebar-bottom-nav {
+    border-top: 1px solid rgba(255,255,255,0.1) !important;
+    padding-top: 1rem !important;
+    margin-top: 2rem !important;
+}
+
 </style>
     """, unsafe_allow_html=True)
