@@ -234,13 +234,6 @@ with col_main:
             if active_sources:
                 st.session_state.active_sources = active_sources
 
-    # Input Actions Mockup (Attach File / Voice) above the native input
-    st.markdown("""
-        <div style="display: flex; gap: 10px; margin-bottom: -15px; margin-left: 10px; z-index: 100; position: relative;">
-            <button class="btn-action" style="padding: 0.2rem 0.6rem; border-radius: 20px;">📎 Attach</button>
-            <button class="btn-action" style="padding: 0.2rem 0.6rem; border-radius: 20px;">🎤 Voice</button>
-        </div>
-    """, unsafe_allow_html=True)
 
     if st.session_state.pending_query:
         query = st.session_state.pending_query

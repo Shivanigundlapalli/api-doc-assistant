@@ -88,14 +88,5 @@ def render_enterprise_answer(parsed: dict, sources: list):
                 st.markdown("**Related Documentation**")
                 st.markdown(parsed["related"])
         
-    # 5. Action Bar
-    st.markdown("""
-        <div style="margin-top: 16px; display: flex; gap: 8px;">
-            <button class="btn-action">📋 Copy Answer</button>
-            <button class="btn-action">🔗 Share</button>
-            <button class="btn-action">👍</button>
-            <button class="btn-action">👎</button>
-        </div>
-    """, unsafe_allow_html=True)
     
     return active_sources
