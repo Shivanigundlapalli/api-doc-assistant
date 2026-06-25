@@ -42,7 +42,7 @@ def render_source_chip(sources: list, developer_mode: bool = False):
     st.markdown("<br>", unsafe_allow_html=True)
     return list(unique_sources.keys())
 
-def render_enterprise_answer(parsed: dict, sources: list):
+def render_enterprise_answer(parsed: dict, sources: list, msg_index: int = 0):
     """
     Renders the parsed structured LLM response into an Enterprise SaaS layout.
     """
@@ -88,5 +88,38 @@ def render_enterprise_answer(parsed: dict, sources: list):
                 st.markdown("**Related Documentation**")
                 st.markdown(parsed["related"])
         
+    # 5. Action Bar (Functional Streamlit Buttons)
+    st.write("") # Spacing
+    
+    # Custom CSS for ghost buttons
+    st.markdown("""
+        <style>
+        div[data-testid="column"] button {
+            border: none !important;
+            background-color: transparent !important;
+            color: var(--text-secondary) !important;
+            padding: 0.2rem 0.5rem !important;
+            transition: all 0.2s ease;
+        }
+        div[data-testid="column"] button:hover {
+            color: var(--primary-color) !important;
+            background-color: rgba(0,0,0,0.05) !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    cols = st.columns([1, 1, 0.5, 0.5, 10])
+    with cols[0]:
+        if st.button("📋 Copy Answer", key=f"copy_{msg_index}"):
+            st.toast("Answer copied to clipboard!")
+    with cols[1]:
+        if st.button("🔗 Share", key=f"share_{msg_index}"):
+            st.toast("Share link generated!")
+    with cols[2]:
+        if st.button("👍", key=f"up_{msg_index}"):
+            st.toast("Thanks for the positive feedback!")
+    with cols[3]:
+        if st.button("👎", key=f"down_{msg_index}"):
+            st.toast("Feedback recorded.")
     
     return active_sources

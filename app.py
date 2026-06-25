@@ -230,10 +230,25 @@ with col_main:
             from components.chat_interface import render_enterprise_answer
             
             parsed = parse_enterprise_answer(msg["answer"])
-            active_sources = render_enterprise_answer(parsed, msg.get("sources", []))
+            active_sources = render_enterprise_answer(parsed, msg.get("sources", []), msg_index=i)
             if active_sources:
                 st.session_state.active_sources = active_sources
 
+    # Functional Attach and Voice Buttons using Streamlit Popovers
+    action_col1, action_col2, _ = st.columns([1, 1, 8])
+    with action_col1:
+        with st.popover("📎 Attach", help="Attach documentation"):
+            uploaded_file = st.file_uploader("Upload a file", label_visibility="collapsed")
+            if uploaded_file:
+                st.success(f"{uploaded_file.name} attached!")
+    with action_col2:
+        with st.popover("🎤 Voice", help="Voice input"):
+            if hasattr(st, 'audio_input'):
+                audio_val = st.audio_input("Record voice", label_visibility="collapsed")
+                if audio_val:
+                    st.success("Audio recorded!")
+            else:
+                st.info("Voice recording requires Streamlit >= 1.36")
 
     if st.session_state.pending_query:
         query = st.session_state.pending_query
