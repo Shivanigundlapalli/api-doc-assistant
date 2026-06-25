@@ -88,35 +88,5 @@ def render_enterprise_answer(parsed: dict, sources: list, msg_index: int = 0):
                 st.markdown("**Related Documentation**")
                 st.markdown(parsed["related"])
         
-    # 5. Action Bar (Functional Streamlit Buttons)
-    st.write("") # Spacing
-    
-    # We use empty st.columns to simulate the toolbar.
-    # The CSS we injected in styling.py targeting `stHorizontalBlock` will format these.
-    action_cols = st.columns([1.2, 1.2, 1.2, 1.2, 8])
-    
-    with action_cols[0]:
-        if st.button("📋 Copy", key=f"copy_{msg_index}", help="Copy Answer"):
-            st.toast("Copied ✓", icon="✅")
-    
-    with action_cols[1]:
-        # Share Dropdown
-        with st.popover("↗ Share", help="Share Menu"):
-            if st.button("Copy Link", key=f"share_link_{msg_index}"):
-                st.toast("Link copied!", icon="✅")
-            if st.button("Copy Markdown", key=f"share_md_{msg_index}"):
-                st.toast("Markdown copied!", icon="✅")
-            if st.button("Share to X", key=f"share_x_{msg_index}"):
-                st.toast("Opening X...", icon="🐦")
-            if st.button("Share to LinkedIn", key=f"share_in_{msg_index}"):
-                st.toast("Opening LinkedIn...", icon="💼")
-
-    with action_cols[2]:
-        if st.button("👍 Helpful", key=f"up_{msg_index}"):
-            st.toast("👍 Thanks for your feedback")
-            
-    with action_cols[3]:
-        if st.button("👎 Not Helpful", key=f"down_{msg_index}"):
-            st.toast("👎 Feedback recorded")
     
     return active_sources
