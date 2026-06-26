@@ -122,82 +122,57 @@ def rewrite_query(question: str) -> str:
         logger.error(f"Unexpected error in query rewriting: {e}")
         return question
 
-from langgraph.prebuilt import create_react_agent
-from langchain_core.tools import create_retriever_tool
-from langchain_core.tools import Tool
-from langchain_core.messages import SystemMessage, HumanMessage
-
-def get_agent_executor(retriever, memory_messages=None):
-    """
-    Initializes a LangChain Agent with tools.
-    """
-    api_key = get_google_api_key()
-    model_name = get_primary_model()
-    
-    llm = ChatGoogleGenerativeAI(
-        model=model_name,
-        google_api_key=api_key,
-        temperature=0,
-        streaming=True
-    )
-    
-    # 1. Retriever Tool
-    retriever_tool = create_retriever_tool(
-        retriever,
-        "search_api_documentation",
-        "Searches and returns excerpts from the API documentation. Always use this first."
-    )
-    
-    # 2. Calculator Tool
-    def calculate(expression: str) -> str:
-        try:
-            return str(eval(expression, {"__builtins__": None}, {}))
-        except Exception as e:
-            return f"Error: {e}"
-            
-    calculator_tool = Tool.from_function(
-        func=calculate,
-        name="calculator",
-        description="Useful for when you need to answer questions about math or rate limits."
-    )
-    
-    tools = [retriever_tool, calculator_tool]
-    
-    # Format Prompt
-    agent_executor = create_react_agent(llm, tools, state_modifier=QA_SYSTEM_PROMPT)
-    
-    return agent_executor
-
 def generate_answer(question: str, context: str, memory=None, retriever=None) -> str:
     """
-    Generates an answer using the LangChain Agent.
-    Streaming is handled by Streamlit's native callback or chunking.
+    Generates an answer using a direct, robust RAG pipeline.
+    Implements empty context protection, validation, and failover retries.
     """
-    try:
-        if not retriever:
-            yield "Vector database is not initialized. Please add documents."
+    # 1. Source Validation
+    if not context or not context.strip():
+        yield "I searched the uploaded documentation but couldn't find information about this topic.\n\n**Related topics you might explore:**\n- Authentication\n- Rate Limits\n- API Keys"
+        return
+
+    # 2. Format Prompt and Memory
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", QA_SYSTEM_PROMPT),
+        ("user", RETRIEVAL_PROMPT)
+    ])
+    
+    memory_str = ""
+    if memory:
+        for m in memory[-3:]: # Include last 3 interactions
+            memory_str += f"User: {m.get('question', '')}\nAssistant: {m.get('answer', '')}\n\n"
+            
+    chain_input = {
+        "context": context,
+        "memory": memory_str if memory_str else "No prior conversation.",
+        "question": question
+    }
+
+    # 3. Failover & Retry Execution
+    max_retries = 2
+    for attempt in range(max_retries):
+        try:
+            llm = initialize_llm()
+            chain = prompt | llm | StrOutputParser()
+            
+            full_response = ""
+            for chunk in chain.stream(chain_input):
+                full_response += chunk
+                yield chunk
+                
+            # 4. Empty Response Protection (Answer Validation)
+            if not full_response.strip():
+                logger.warning(f"Empty response received on attempt {attempt + 1}")
+                if attempt < max_retries - 1:
+                    continue # Retry
+                else:
+                    yield "I found related documentation but couldn't generate a reliable answer. Please try rephrasing your question."
+            
+            # Successfully generated answer
             return
             
-        agent_executor = get_agent_executor(retriever)
-        
-        chat_history = []
-        if memory:
-            for m in memory[-4:]:
-                chat_history.append(HumanMessage(content=m['question']))
-                chat_history.append(SystemMessage(content=m['answer']))
-                
-        # Stream response
-        for chunk in agent_executor.stream(
-            {"input": question, "chat_history": chat_history}
-        ):
-            if "actions" in chunk:
-                for action in chunk["actions"]:
-                    yield f"🤔 *Thinking: Using {action.tool}...*\n\n"
-            elif "steps" in chunk:
-                pass
-            elif "output" in chunk:
-                yield chunk["output"]
-                
-    except Exception as e:
-        logger.error(f"Generation failed: {e}")
-        yield f"Gemini API quota exceeded or error occurred: {e}\nPlease try again later."
+        except Exception as e:
+            logger.error(f"Generation failed on attempt {attempt + 1}: {e}")
+            if attempt == max_retries - 1:
+                yield "An unexpected error occurred while generating the answer. Please ensure your API keys and quotas are valid, and try again."
