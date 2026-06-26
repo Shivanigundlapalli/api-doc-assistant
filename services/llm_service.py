@@ -82,51 +82,38 @@ def initialize_llm():
     st.info(f"Last error encountered: {last_error}")
     st.stop()
 
+import re
+
 def check_guardrails(question: str) -> bool:
     """
-    Checks if a query is safe and relevant.
+    Checks if a query is safe and relevant using high-speed Python heuristics instead of an LLM.
     Returns True if ALLOWED, False if BLOCKED.
     """
-    try:
-        llm = initialize_llm()
-        prompt = PromptTemplate(template=GUARDRAILS_PROMPT, input_variables=["question"])
-        chain = prompt | llm
-        
-        response = chain.invoke({"question": question})
-        result = response.content.strip().upper()
-        return "ALLOWED" in result
-    except (ChatGoogleGenerativeAIError, GoogleGenerativeAIError, Exception) as e:
-        err_str = str(e)
-        if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str or "NOT_FOUND" in err_str or "PERMISSION_DENIED" in err_str:
-            logger.warning("Gemini quota exceeded or access denied. Skipping guardrails.")
-            return True # Allow the query if guardrails fail due to quota
-        logger.error(f"Unexpected error in guardrails: {e}")
-        return True
+    blocked_keywords = [
+        "ignore previous instructions", "you are now a", "system prompt",
+        "medical advice", "legal advice", "hack", "bypass", "exploit"
+    ]
+    question_lower = question.lower()
+    for keyword in blocked_keywords:
+        if keyword in question_lower:
+            logger.warning(f"Guardrails blocked query for keyword: {keyword}")
+            return False
+            
+    return True
 
 def rewrite_query(question: str) -> str:
     """
-    Rewrites a vague query into a specific one.
+    Bypasses LLM rewriting for speed optimization. Returns original query.
     """
-    try:
-        llm = initialize_llm()
-        prompt = PromptTemplate(template=REWRITE_PROMPT, input_variables=["question"])
-        chain = prompt | llm
-        
-        response = chain.invoke({"question": question})
-        return response.content.strip()
-    except (ChatGoogleGenerativeAIError, GoogleGenerativeAIError, Exception) as e:
-        err_str = str(e)
-        if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str or "NOT_FOUND" in err_str or "PERMISSION_DENIED" in err_str:
-            logger.warning("Gemini quota exceeded or access denied. Skipping query optimization.")
-            return question # Return original query
-        logger.error(f"Unexpected error in query rewriting: {e}")
-        return question
+    return question.strip()
 
 def generate_answer(question: str, context: str, memory=None, retriever=None) -> str:
     """
     Generates an answer using a direct, robust RAG pipeline.
-    Implements empty context protection, validation, and failover retries.
+    Implements empty context protection, validation (len > 20), failover retries, and detailed telemetry.
     """
+    start_time = time.time()
+    
     # 1. Source Validation
     if not context or not context.strip():
         yield "I searched the uploaded documentation but couldn't find information about this topic.\n\n**Related topics you might explore:**\n- Authentication\n- Rate Limits\n- API Keys"
@@ -153,6 +140,7 @@ def generate_answer(question: str, context: str, memory=None, retriever=None) ->
     max_retries = 2
     for attempt in range(max_retries):
         try:
+            llm_start_time = time.time()
             llm = initialize_llm()
             chain = prompt | llm | StrOutputParser()
             
@@ -161,13 +149,28 @@ def generate_answer(question: str, context: str, memory=None, retriever=None) ->
                 full_response += chunk
                 yield chunk
                 
-            # 4. Empty Response Protection (Answer Validation)
-            if not full_response.strip():
-                logger.warning(f"Empty response received on attempt {attempt + 1}")
+            llm_end_time = time.time()
+            llm_time = llm_end_time - llm_start_time
+            total_time = llm_end_time - start_time
+            
+            # 4. Answer Validation (Length > 20)
+            if not full_response or len(full_response.strip()) <= 20:
+                logger.warning(f"Answer validation failed on attempt {attempt + 1}: length {len(full_response)} <= 20")
                 if attempt < max_retries - 1:
                     continue # Retry
                 else:
                     yield "I found related documentation but couldn't generate a reliable answer. Please try rephrasing your question."
+                    return
+            
+            # 5. Pipeline Report
+            print("\n" + "="*50)
+            print("PIPELINE REPORT")
+            print("="*50)
+            print(f"LLM Time: {llm_time:.3f}s")
+            print(f"Total Generation Time: {total_time:.3f}s")
+            print(f"Answer Length: {len(full_response)} chars")
+            print(f"Model Used: {get_primary_model() if attempt == 0 else get_fallback_model()}")
+            print("="*50 + "\n")
             
             # Successfully generated answer
             return

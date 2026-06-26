@@ -5,6 +5,7 @@ from langchain_chroma import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from config import get_embedding_model, get_google_api_key, get_chroma_directory
 
+@st.cache_resource(show_spinner=False)
 def get_embeddings():
     try:
         api_key = get_google_api_key()
