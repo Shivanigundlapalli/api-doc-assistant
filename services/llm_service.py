@@ -166,6 +166,57 @@ def compress_context(question: str, chunks: list) -> str:
     except Exception as e:
         logger.warning(f"Context compressor failed, falling back to raw: {e}")
         return "\n\n".join([c.page_content for c in chunks])
+
+def rerank_and_score_confidence(question: str, chunks: list, top_k: int = 3) -> dict:
+    """
+    Reranks chunks and calculates a confidence score (0-100).
+    Returns: {"top_chunks": [...], "confidence": 92}
+    """
+    if not chunks:
+        return {"top_chunks": [], "confidence": 0}
+        
+    llm = get_fallback_model()
+    try:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        fast_llm = ChatGoogleGenerativeAI(model=llm, google_api_key=api_key, temperature=0)
+    except:
+        fast_llm = initialize_llm()
+        
+    chunks_str = "\n\n".join([f"ID: {i}\nContent: {c.page_content}" for i, c in enumerate(chunks)])
+    
+    prompt = PromptTemplate.from_template(
+        "You are an expert search reranker.\n"
+        "User Query: {question}\n\n"
+        "Retrieved Chunks:\n{chunks_str}\n\n"
+        "Evaluate the chunks against the query. Identify the top 3 most relevant chunk IDs. "
+        "Also assign a confidence score (0-100) indicating how well these chunks answer the query completely. "
+        "If the answer is completely missing, confidence should be < 50.\n"
+        "Output strictly JSON format: {{\"top_ids\": [0, 2, 4], \"confidence\": 95}}"
+    )
+    chain = prompt | fast_llm
+    
+    try:
+        res = chain.invoke({"question": question, "chunks_str": chunks_str})
+        text = res.content
+        if "```json" in text:
+            text = text.split("```json")[1].split("```")[0]
+        elif "```" in text:
+            text = text.split("```")[1].split("```")[0]
+            
+        data = json.loads(text.strip())
+        top_ids = data.get("top_ids", list(range(min(top_k, len(chunks)))))
+        confidence = data.get("confidence", 50)
+        
+        top_chunks = [chunks[i] for i in top_ids if i < len(chunks)][:top_k]
+        
+        # If the LLM failed to return valid IDs, fallback to original top_k
+        if not top_chunks:
+            top_chunks = chunks[:top_k]
+            
+        return {"top_chunks": top_chunks, "confidence": confidence}
+    except Exception as e:
+        logger.warning(f"Reranker failed, falling back: {e}")
+        return {"top_chunks": chunks[:top_k], "confidence": 60}
 from langgraph.prebuilt import create_react_agent
 from langchain_core.tools import create_retriever_tool
 from langchain_core.tools import Tool

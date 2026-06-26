@@ -230,27 +230,21 @@ if query:
             st.error(f"Error checking guardrails: {e}")
             st.stop()
             
-    # 3. Query Understanding & Rewriting (Analyzer)
-    from services.llm_service import analyze_query, compress_context
-    with st.spinner("Analyzing query..."):
+    from services.llm_service import analyze_query, compress_context, rerank_and_score_confidence
+    
+    with st.status("Understanding your question...", expanded=True) as status:
         try:
             analysis = analyze_query(query, st.session_state.get("chat_history", []))
             optimized_query = analysis["rewritten_query"]
             category = analysis["category"]
             
-            if optimized_query != query:
-                st.caption(f"Optimized search: *{optimized_query}*")
-        except Exception as e:
-            optimized_query = query
-            category = "General"
+            status.update(label="Optimizing search query...", state="running")
             
-    # 4. Retrieval, Compression & Answer Generation
-    with st.spinner("Searching documentation..."):
-        try:
             if not retriever:
-                st.error("Vector database is not initialized. Please add documents.")
+                status.update(label="Error: Vector database not initialized.", state="error")
                 st.stop()
                 
+            status.update(label="Searching documentation...", state="running")
             if optimized_query in st.session_state.retrieval_cache:
                 raw_docs = st.session_state.retrieval_cache[optimized_query]
             else:
@@ -259,39 +253,57 @@ if query:
                 
             docs = deduplicate_docs(raw_docs)
             
-            # Step 7: Context Compression
-            with st.spinner("Compressing context..."):
-                compressed_context = compress_context(optimized_query, docs)
+            status.update(label="Ranking relevant sections...", state="running")
+            rerank_result = rerank_and_score_confidence(optimized_query, docs, top_k=3)
+            top_docs = rerank_result["top_chunks"]
+            confidence = rerank_result["confidence"]
             
-            # Step 8-11: Agent Reasoning & Streaming
-            answer_stream = generate_answer(optimized_query, compressed_context, memory=st.session_state.get("chat_history", []), retriever=retriever)
+            if confidence < 85:
+                status.update(label="Low confidence. Aborting generation.", state="error")
+                err_msg = "I couldn't find this information in the uploaded documentation. You may want to upload the relevant API guide. I don't want to guess because that could produce inaccurate technical guidance."
+                with st.chat_message("assistant", avatar="🤖"):
+                    st.markdown(err_msg)
+                st.session_state.chat_history.append({"role": "user", "question": query})
+                st.session_state.chat_history.append({"role": "assistant", "answer": err_msg, "sources": []})
+                from utils.memory_manager import add_message
+                add_message(st.session_state.current_chat_id, "assistant", err_msg)
+                st.stop()
             
-            # Stream Response into Native UI
-            with st.chat_message("assistant", avatar="🤖"):
-                st.caption("✨ Synthesizing response...")
-                answer = st.write_stream(answer_stream)
-                
-                if docs:
-                    render_source_chips(docs)
-                
-                if is_debug_mode():
-                    with st.expander("🔍 Query Telemetry (Admin)", expanded=False):
-                        st.caption(f"**Intent Category:** {category}")
-                        st.caption(f"**Compressed Context Length:** {len(compressed_context)} chars")
-                        st.caption(f"Retrieved {len(docs)} document chunks.")
-                        for i, doc in enumerate(docs):
-                            st.caption(f"**Chunk {i+1} Metadata:** {doc.metadata}")
+            status.update(label="Generating answer...", state="running")
+            compressed_context = compress_context(optimized_query, top_docs)
             
-            st.session_state.chat_history.append({"role": "user", "question": query})
-            st.session_state.chat_history.append({"role": "assistant", "answer": answer, "sources": docs})
+            status.update(label="Response generated", state="complete", expanded=False)
             
-            source_dicts = [{"content": d.page_content, "metadata": d.metadata} for d in docs]
-            add_message(st.session_state.current_chat_id, "assistant", answer, sources=source_dicts)
-            
-            # Update Category
-            from utils.memory_manager import update_chat_category
-            update_chat_category(st.session_state.current_chat_id, category)
-            
-            st.rerun()
         except Exception as e:
-            st.error(f"Error during retrieval or answer generation: {e}")
+            status.update(label=f"Error: {e}", state="error")
+            st.stop()
+
+    # Step 8-11: Agent Reasoning & Streaming
+    answer_stream = generate_answer(optimized_query, compressed_context, memory=st.session_state.get("chat_history", []), retriever=retriever)
+    
+    # Stream Response into Native UI
+    with st.chat_message("assistant", avatar="🤖"):
+        answer = st.write_stream(answer_stream)
+        
+        if top_docs:
+            render_source_chips(top_docs)
+            
+        # Confidence Badge
+        st.markdown(f"<div style='margin-top: 15px; font-size: 0.85rem; color: #16A34A; background-color: #DCFCE7; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 12px; font-weight: 500;'>🛡️ Verified by Documentation | {confidence}% Confidence | {len(top_docs)} chunks used</div>", unsafe_allow_html=True)
+        
+        if is_debug_mode():
+            with st.expander("🔍 Query Telemetry (Admin)", expanded=False):
+                st.caption(f"**Intent Category:** {category}")
+                st.caption(f"**Compressed Context Length:** {len(compressed_context)} chars")
+                for i, doc in enumerate(top_docs):
+                    st.caption(f"**Chunk {i+1} Metadata:** {doc.metadata}")
+            
+        st.session_state.chat_history.append({"role": "user", "question": query})
+        st.session_state.chat_history.append({"role": "assistant", "answer": answer, "sources": top_docs})
+        
+        source_dicts = [{"content": d.page_content, "metadata": d.metadata} for d in top_docs]
+        from utils.memory_manager import add_message, update_chat_category
+        add_message(st.session_state.current_chat_id, "assistant", answer, sources=source_dicts)
+        update_chat_category(st.session_state.current_chat_id, category)
+        
+        st.rerun()
