@@ -73,8 +73,15 @@ def render_enterprise_answer(parsed: dict, sources: list, msg_index: int = 0):
         
         sources_html = ""
         for src in sources:
-            name = src.get("name", "Unknown Source")
-            url = src.get("url", "#")
+            if isinstance(src, dict):
+                metadata = src.get("metadata", {})
+            else:
+                metadata = getattr(src, "metadata", {})
+                
+            raw_name = metadata.get("source", metadata.get("name", "Unknown Source"))
+            name = str(raw_name).split('/')[-1].split('\\')[-1]
+            url = metadata.get("url", "#")
+            
             active_sources.append(name)
             sources_html += f"<a href='{url}' target='_blank' class='source-chip'>📄 {name} ↗</a>"
             
