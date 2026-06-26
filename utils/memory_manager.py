@@ -56,7 +56,13 @@ def get_all_chats() -> List[Dict[str, Any]]:
     cursor.execute("""
         SELECT c.* 
         FROM chats c
-        WHERE EXISTS (SELECT 1 FROM messages m WHERE m.chat_id = c.id)
+        WHERE EXISTS (
+            SELECT 1 FROM messages m 
+            WHERE m.chat_id = c.id 
+            AND m.content IS NOT NULL 
+            AND m.content != 'None' 
+            AND m.content != ''
+        )
         ORDER BY c.updated_at DESC
     """)
     chats = [dict(row) for row in cursor.fetchall()]
@@ -66,7 +72,14 @@ def get_all_chats() -> List[Dict[str, Any]]:
 def get_messages(chat_id: str) -> List[Dict[str, Any]]:
     conn = _get_conn()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM messages WHERE chat_id = ? ORDER BY created_at ASC", (chat_id,))
+    cursor.execute("""
+        SELECT * FROM messages 
+        WHERE chat_id = ? 
+        AND content IS NOT NULL 
+        AND content != 'None' 
+        AND content != ''
+        ORDER BY created_at ASC
+    """, (chat_id,))
     messages = []
     for row in cursor.fetchall():
         msg = dict(row)
