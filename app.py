@@ -37,7 +37,6 @@ from utils.text_processing import split_documents, deduplicate_docs
 from components.styling import inject_custom_css
 from components.sidebar import render_sidebar
 from components.hero import render_hero
-from components.chat_interface import render_source_chip
 from utils.memory_manager import create_chat, get_messages, add_message
 
 # ==========================
