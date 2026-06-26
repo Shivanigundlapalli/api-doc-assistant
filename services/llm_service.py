@@ -7,7 +7,7 @@ from langchain_core.output_parsers import StrOutputParser
 from google.generativeai.types import generation_types
 from google.api_core.exceptions import GoogleAPIError
 
-from prompts.system_prompts import QA_SYSTEM_PROMPT, REWRITE_PROMPT, GUARDRAILS_PROMPT, RETRIEVAL_PROMPT
+from prompts.system_prompts import QA_SYSTEM_PROMPT, GUARDRAILS_PROMPT, RETRIEVAL_PROMPT
 from config import (
     get_google_api_key,
     get_primary_model,

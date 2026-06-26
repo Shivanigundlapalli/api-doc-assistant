@@ -29,7 +29,7 @@ initialize_langsmith()
 
 # Import core services
 from services.vector_store_service import initialize_vector_store, build_vector_store, get_retriever
-from services.llm_service import generate_answer, check_guardrails, rewrite_query
+from services.llm_service import generate_answer, check_guardrails
 from utils.document_loaders import load_documents
 from utils.text_processing import split_documents, deduplicate_docs
 
