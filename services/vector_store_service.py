@@ -87,9 +87,12 @@ def build_vector_store(chunks):
         st.error(f"Failed to build vector store: {e}")
         return None
 
+from langchain.retrievers.document_compressors import EmbeddingsFilter
+from langchain.retrievers import ContextualCompressionRetriever
+
 def get_retriever(vector_store, k=8):
     """
-    Configures and returns the retriever using MMR.
+    Configures and returns the retriever using MMR and Contextual Compression (Re-ranking).
     """
     if not vector_store:
         return None
@@ -99,13 +102,26 @@ def get_retriever(vector_store, k=8):
         base_retriever = vector_store.as_retriever(
             search_type="mmr",
             search_kwargs={
-                "k": k,
-                "fetch_k": k * 2,
+                "k": k * 2, # Fetch more initially for compression
+                "fetch_k": k * 4,
                 "lambda_mult": 0.5
             }
         )
         
-        return base_retriever
+        # Fast Embedding-based Re-ranking/Compression
+        embeddings = get_embeddings()
+        embeddings_filter = EmbeddingsFilter(
+            embeddings=embeddings, 
+            similarity_threshold=0.65,
+            k=k
+        )
+        
+        compression_retriever = ContextualCompressionRetriever(
+            base_compressor=embeddings_filter,
+            base_retriever=base_retriever
+        )
+        
+        return compression_retriever
     except Exception as e:
         st.error(f"Failed to configure retriever: {e}")
         return None

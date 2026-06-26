@@ -107,53 +107,100 @@ def rewrite_query(question: str) -> str:
     """
     return question.strip()
 
+from langgraph.prebuilt import create_react_agent
+from langchain_core.tools import create_retriever_tool
+from langchain_core.tools import Tool
+from langchain_core.messages import SystemMessage, HumanMessage
+
+def get_agent_executor(retriever):
+    """
+    Initializes a LangChain Agent with tools and the production system prompt.
+    """
+    llm = initialize_llm()
+    
+    # 1. Retriever Tool
+    retriever_tool = create_retriever_tool(
+        retriever,
+        "search_api_documentation",
+        "Searches and returns excerpts from the API documentation. You MUST use this tool first to find relevant context for the user's question."
+    )
+    
+    # 2. Calculator Tool
+    def calculate(expression: str) -> str:
+        try:
+            return str(eval(expression, {"__builtins__": None}, {}))
+        except Exception as e:
+            return f"Error: {e}"
+            
+    calculator_tool = Tool.from_function(
+        func=calculate,
+        name="calculator",
+        description="Useful for when you need to answer questions about math or rate limits."
+    )
+    
+    tools = [retriever_tool, calculator_tool]
+    
+    # We use the QA_SYSTEM_PROMPT as the state modifier to enforce grounding and format
+    agent_executor = create_react_agent(llm, tools, state_modifier=QA_SYSTEM_PROMPT)
+    
+    return agent_executor
+
 def generate_answer(question: str, context: str, memory=None, retriever=None) -> str:
     """
-    Generates an answer using a direct, robust RAG pipeline.
-    Implements empty context protection, validation (len > 20), failover retries, and detailed telemetry.
+    Generates an answer using a full LangChain Agent.
+    Implements validation (len > 20), failover retries, and detailed telemetry.
+    The 'context' argument is kept for signature compatibility but ignored, as the Agent handles retrieval.
     """
     start_time = time.time()
     
-    # 1. Source Validation
-    if not context or not context.strip():
-        yield "I searched the uploaded documentation but couldn't find information about this topic.\n\n**Related topics you might explore:**\n- Authentication\n- Rate Limits\n- API Keys"
+    if not retriever:
+        yield "Vector database is not initialized. Please add documents."
         return
 
-    # 2. Format Prompt and Memory
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", QA_SYSTEM_PROMPT),
-        ("user", RETRIEVAL_PROMPT)
-    ])
-    
-    memory_str = ""
+    # Format Memory and Context
+    chat_history = []
     if memory:
         for m in memory[-3:]: # Include last 3 interactions
-            memory_str += f"User: {m.get('question', '')}\nAssistant: {m.get('answer', '')}\n\n"
+            chat_history.append(HumanMessage(content=m.get('question', '')))
+            chat_history.append(SystemMessage(content=m.get('answer', '')))
+            
+    # Inject pre-retrieved context into the first message to force grounding
+    initial_prompt = f"Retrieved Documentation Context:\n{context}\n\nUser Question: {question}"
             
     chain_input = {
-        "context": context,
-        "memory": memory_str if memory_str else "No prior conversation.",
-        "question": question
+        "messages": chat_history + [HumanMessage(content=initial_prompt)]
     }
 
-    # 3. Failover & Retry Execution
+    # Failover & Retry Execution
     max_retries = 2
     for attempt in range(max_retries):
         try:
             llm_start_time = time.time()
-            llm = initialize_llm()
-            chain = prompt | llm | StrOutputParser()
+            agent_executor = get_agent_executor(retriever)
             
             full_response = ""
-            for chunk in chain.stream(chain_input):
-                full_response += chunk
-                yield chunk
+            for event in agent_executor.stream(chain_input, stream_mode="values"):
+                # values mode returns the full state at each step
+                message = event["messages"][-1]
+                
+                # If it's an AIMessage with tool calls
+                if hasattr(message, "tool_calls") and message.tool_calls:
+                    for tc in message.tool_calls:
+                        yield f"🤔 *Thinking: Using {tc['name']}...*\n\n"
+                        
+                # If it's a final text response from AI (not a tool call)
+                elif message.type == "ai" and message.content and not hasattr(message, "tool_calls"):
+                    # We just yield the difference since stream_mode="values" gives the full content
+                    chunk = message.content[len(full_response):]
+                    if chunk:
+                        full_response = message.content
+                        yield chunk
                 
             llm_end_time = time.time()
             llm_time = llm_end_time - llm_start_time
             total_time = llm_end_time - start_time
             
-            # 4. Answer Validation (Length > 20)
+            # Answer Validation (Length > 20)
             if not full_response or len(full_response.strip()) <= 20:
                 logger.warning(f"Answer validation failed on attempt {attempt + 1}: length {len(full_response)} <= 20")
                 if attempt < max_retries - 1:
@@ -162,7 +209,7 @@ def generate_answer(question: str, context: str, memory=None, retriever=None) ->
                     yield "I found related documentation but couldn't generate a reliable answer. Please try rephrasing your question."
                     return
             
-            # 5. Pipeline Report
+            # Pipeline Report
             print("\n" + "="*50)
             print("PIPELINE REPORT")
             print("="*50)
@@ -172,7 +219,6 @@ def generate_answer(question: str, context: str, memory=None, retriever=None) ->
             print(f"Model Used: {get_primary_model() if attempt == 0 else get_fallback_model()}")
             print("="*50 + "\n")
             
-            # Successfully generated answer
             return
             
         except Exception as e:
