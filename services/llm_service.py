@@ -174,7 +174,7 @@ def rerank_and_score_confidence(question: str, chunks: list, top_k: int = 3) -> 
             score += 30
             
         # Boost for API specifics
-        if "api" in question_lower and "endpoint" in content_lower:
+        if "api" in question.lower() and "endpoint" in content_lower:
             score += 10
             
         scored_chunks.append((score, chunk))
