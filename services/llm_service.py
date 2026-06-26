@@ -123,7 +123,7 @@ def rewrite_query(question: str) -> str:
         return question
 
 from langgraph.prebuilt import create_react_agent
-from langchain.tools.retriever import create_retriever_tool
+from langchain_core.tools import create_retriever_tool
 from langchain_core.tools import Tool
 from langchain_core.messages import SystemMessage, HumanMessage
 
