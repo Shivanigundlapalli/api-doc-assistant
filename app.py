@@ -205,7 +205,9 @@ else:
     # Inject native floating buttons for Attach and Voice using CSS positioning
     st.markdown('<div class="floating-icons-anchor"></div>', unsafe_allow_html=True)
     
-    col1, col2, col_empty = st.columns([1, 1, 8])
+    # We will use CSS to position this block next to the send button
+    st.markdown('<span id="chat-btn-anchor"></span>', unsafe_allow_html=True)
+    col_empty, col1, col2 = st.columns([8, 1, 1])
     with col1:
         st.button("📎", key="attach_btn", help="Attach file")
     with col2:
@@ -213,6 +215,7 @@ else:
 
     query = st.chat_input("Ask anything about your API documentation...")
 
+if query:
     with chat_col:
         # 1. Render User Message
         with st.chat_message("user"):

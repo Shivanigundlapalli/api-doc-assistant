@@ -20,7 +20,7 @@ def render_sidebar():
         """, unsafe_allow_html=True)
         
         # New Chat Button
-        if st.button("➕ New Chat", use_container_width=True):
+        if st.button("➕ New Chat", use_container_width=True, type="primary"):
             st.session_state.current_chat_id = create_chat()
             st.session_state.chat_history = []
             st.session_state.active_sources = []

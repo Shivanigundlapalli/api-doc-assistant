@@ -371,8 +371,8 @@ div[data-testid="stChatInput"] textarea {
     color: #FFFFFF !important;
 }
 
-/* Sidebar New Chat Button */
-[data-testid="stSidebar"] button[data-testid="baseButton-secondary"] {
+/* Sidebar New Chat Button (Primary) */
+[data-testid="stSidebar"] button[kind="primary"] {
     background-color: #891C1C !important;
     border: 1px solid rgba(255,255,255,0.2) !important;
     color: #FFFFFF !important;
@@ -385,9 +385,40 @@ div[data-testid="stChatInput"] textarea {
     align-items: center !important;
 }
 
-[data-testid="stSidebar"] button[data-testid="baseButton-secondary"]:hover {
+[data-testid="stSidebar"] button[kind="primary"]:hover {
     background-color: rgba(255,255,255,0.1) !important;
     border-color: #FCA5A5 !important;
+}
+
+[data-testid="stSidebar"] button[kind="primary"] p {
+    color: #FFFFFF !important;
+}
+
+/* Sidebar Chat History Buttons (Secondary / White Boxes) */
+[data-testid="stSidebar"] button[kind="secondary"] {
+    background-color: #FFFFFF !important;
+    border: 1px solid rgba(0,0,0,0.1) !important;
+    color: #C0392B !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+    width: 100% !important;
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    padding: 0.5rem 1rem !important;
+}
+
+[data-testid="stSidebar"] button[kind="secondary"]:hover {
+    background-color: #F8FAFC !important;
+    border-color: #C0392B !important;
+}
+
+/* Force text inside the white boxes to be red */
+[data-testid="stSidebar"] button[kind="secondary"] p,
+[data-testid="stSidebar"] button[kind="secondary"] span,
+[data-testid="stSidebar"] button[kind="secondary"] div {
+    color: #C0392B !important;
 }
 
 /* Sidebar Custom Links & Elements */
@@ -545,20 +576,44 @@ div[data-testid="stChatInput"] textarea {
 }
 
 /* Floating Native Action Buttons (Attach/Voice) */
-/* We target the buttons right above the chat input to give them the requested red style */
-div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
+/* Position them absolutely next to the chat input's send button */
+div:has(> span#chat-btn-anchor) + div[data-testid="stHorizontalBlock"] {
+    position: fixed !important;
+    bottom: 3.5rem !important;
+    right: 5.5rem !important;
+    z-index: 99999 !important;
+    width: auto !important;
+    background: transparent !important;
+}
+
+div:has(> span#chat-btn-anchor) + div[data-testid="stHorizontalBlock"] > div {
+    min-width: auto !important;
+    width: auto !important;
+    flex: 0 1 auto !important;
+}
+
+div:has(> span#chat-btn-anchor) + div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
     border: 1px solid rgba(229, 62, 62, 0.3) !important;
     background-color: #FAFAFA !important;
     color: #891C1C !important;
-    border-radius: 8px !important;
-    padding: 4px 12px !important;
+    border-radius: 50% !important;
+    width: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
     transition: all 0.2s ease !important;
 }
 
-div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
+div:has(> span#chat-btn-anchor) + div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
     border: 1px solid #E53E3E !important;
     background-color: rgba(229, 62, 62, 0.05) !important;
 }
 
+/* Ensure the chat input has enough padding on the right to not overlap text with our buttons */
+[data-testid="stChatInput"] textarea {
+    padding-right: 130px !important;
+}
 </style>
     """, unsafe_allow_html=True)
