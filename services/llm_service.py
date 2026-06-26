@@ -122,7 +122,7 @@ def rewrite_query(question: str) -> str:
         logger.error(f"Unexpected error in query rewriting: {e}")
         return question
 
-from langchain.agents import create_tool_calling_agent, AgentExecutor
+from langgraph.prebuilt import create_react_agent
 from langchain.tools.retriever import create_retriever_tool
 from langchain_core.tools import Tool
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -164,15 +164,7 @@ def get_agent_executor(retriever, memory_messages=None):
     tools = [retriever_tool, calculator_tool]
     
     # Format Prompt
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", QA_SYSTEM_PROMPT),
-        ("placeholder", "{chat_history}"),
-        ("human", "{input}"),
-        ("placeholder", "{agent_scratchpad}"),
-    ])
-    
-    agent = create_tool_calling_agent(llm, tools, prompt)
-    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+    agent_executor = create_react_agent(llm, tools, state_modifier=QA_SYSTEM_PROMPT)
     
     return agent_executor
 
