@@ -258,9 +258,9 @@ if query:
             top_docs = rerank_result["top_chunks"]
             confidence = rerank_result["confidence"]
             
-            if confidence < 85:
+            if confidence < 60:
                 status.update(label="Low confidence. Aborting generation.", state="error")
-                err_msg = "I couldn't find this information in the uploaded documentation. You may want to upload the relevant API guide. I don't want to guess because that could produce inaccurate technical guidance."
+                err_msg = "I couldn't find sufficient information in the uploaded documentation to answer this confidently. Please upload the relevant documentation or ask a different question."
                 with st.chat_message("assistant", avatar="🤖"):
                     st.markdown(err_msg)
                 st.session_state.chat_history.append({"role": "user", "question": query})
@@ -289,7 +289,10 @@ if query:
             render_source_chips(top_docs)
             
         # Confidence Badge
-        st.markdown(f"<div style='margin-top: 15px; font-size: 0.85rem; color: #16A34A; background-color: #DCFCE7; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 12px; font-weight: 500;'>🛡️ Verified by Documentation | {confidence}% Confidence | {len(top_docs)} chunks used</div>", unsafe_allow_html=True)
+        if confidence >= 85:
+            st.markdown(f"<div style='margin-top: 15px; font-size: 0.85rem; color: #16A34A; background-color: #DCFCE7; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 12px; font-weight: 500;'>🛡️ Verified by Documentation | {confidence}% Confidence | {len(top_docs)} chunks used</div>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"<div style='margin-top: 15px; font-size: 0.85rem; color: #B45309; background-color: #FEF3C7; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 12px; font-weight: 500;'>⚠️ Medium Confidence | {confidence}% | Answer carefully</div>", unsafe_allow_html=True)
         
         if is_debug_mode():
             with st.expander("🔍 Query Telemetry (Admin)", expanded=False):
