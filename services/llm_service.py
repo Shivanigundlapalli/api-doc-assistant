@@ -122,68 +122,90 @@ def rewrite_query(question: str) -> str:
         logger.error(f"Unexpected error in query rewriting: {e}")
         return question
 
-def generate_answer(question: str, context: str, memory=None) -> str:
+from langchain.agents import create_tool_calling_agent, AgentExecutor
+from langchain.tools.retriever import create_retriever_tool
+from langchain_core.tools import Tool
+from langchain_core.messages import SystemMessage, HumanMessage
+
+def get_agent_executor(retriever, memory_messages=None):
     """
-    Generates an answer based on the context and conversation history,
-    with dynamic retries and fallback across available models during inference.
+    Initializes a LangChain Agent with tools.
     """
     api_key = get_google_api_key()
+    model_name = get_primary_model()
     
-    MODELS = [
-        get_primary_model(),
-        get_fallback_model()
-    ]
+    llm = ChatGoogleGenerativeAI(
+        model=model_name,
+        google_api_key=api_key,
+        temperature=0,
+        streaming=True
+    )
     
-    MAX_RETRIES = 1
-    RETRY_DELAY = 2
+    # 1. Retriever Tool
+    retriever_tool = create_retriever_tool(
+        retriever,
+        "search_api_documentation",
+        "Searches and returns excerpts from the API documentation. Always use this first."
+    )
     
+    # 2. Calculator Tool
+    def calculate(expression: str) -> str:
+        try:
+            return str(eval(expression, {"__builtins__": None}, {}))
+        except Exception as e:
+            return f"Error: {e}"
+            
+    calculator_tool = Tool.from_function(
+        func=calculate,
+        name="calculator",
+        description="Useful for when you need to answer questions about math or rate limits."
+    )
+    
+    tools = [retriever_tool, calculator_tool]
+    
+    # Format Prompt
     prompt = ChatPromptTemplate.from_messages([
         ("system", QA_SYSTEM_PROMPT),
-        ("human", RETRIEVAL_PROMPT)
+        ("placeholder", "{chat_history}"),
+        ("human", "{input}"),
+        ("placeholder", "{agent_scratchpad}"),
     ])
     
-    # Format memory string
-    memory_str = ""
-    if memory:
-        # Include up to the last 4 exchanges to keep context window reasonable
-        for m in memory[-4:]:
-            memory_str += f"User: {m['question']}\nAssistant: {m['answer']}\n\n"
-    if not memory_str:
-        memory_str = "No previous conversation."
+    agent = create_tool_calling_agent(llm, tools, prompt)
+    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
     
-    for attempt in range(MAX_RETRIES):
-        for model_name in MODELS:
-            logger.info(f"Using Gemini model: {model_name}")
-            try:
-                llm = ChatGoogleGenerativeAI(
-                    model=model_name,
-                    google_api_key=api_key,
-                    temperature=0,
-                    timeout=15
-                )
-                chain = prompt | llm | StrOutputParser()
-                yield from chain.stream({"context": context, "memory": memory_str, "question": question})
-                return
-            except (ChatGoogleGenerativeAIError, GoogleGenerativeAIError, Exception) as e:
-                err_str = str(e)
-                logger.warning(f"Generation failed with model {model_name} (Attempt {attempt+1}/{MAX_RETRIES}): {err_str}")
-                
-        # If all Gemini models fail, try Ollama
-        if use_ollama_fallback():
-            logger.info("Falling back to Ollama")
-            from langchain_ollama import ChatOllama
-            ollama_model = get_ollama_model()
-            try:
-                llm = ChatOllama(model=ollama_model, temperature=0)
-                chain = prompt | llm | StrOutputParser()
-                yield from chain.stream({"context": context, "memory": memory_str, "question": question})
-                return
-            except Exception as e:
-                logger.warning(f"Ollama unavailable. Fallback {ollama_model} also failed: {e}")
-                
-        if attempt < MAX_RETRIES - 1:
-            st.warning(f"APIs temporarily unavailable. Retrying in {RETRY_DELAY} seconds...")
-            time.sleep(RETRY_DELAY)
+    return agent_executor
+
+def generate_answer(question: str, context: str, memory=None, retriever=None) -> str:
+    """
+    Generates an answer using the LangChain Agent.
+    Streaming is handled by Streamlit's native callback or chunking.
+    """
+    try:
+        if not retriever:
+            yield "Vector database is not initialized. Please add documents."
+            return
             
-    logger.error("All fallback chains exhausted for generation.")
-    yield "Gemini API quota exceeded.\nPlease try again later or use another API key."
+        agent_executor = get_agent_executor(retriever)
+        
+        chat_history = []
+        if memory:
+            for m in memory[-4:]:
+                chat_history.append(HumanMessage(content=m['question']))
+                chat_history.append(SystemMessage(content=m['answer']))
+                
+        # Stream response
+        for chunk in agent_executor.stream(
+            {"input": question, "chat_history": chat_history}
+        ):
+            if "actions" in chunk:
+                for action in chunk["actions"]:
+                    yield f"🤔 *Thinking: Using {action.tool}...*\n\n"
+            elif "steps" in chunk:
+                pass
+            elif "output" in chunk:
+                yield chunk["output"]
+                
+    except Exception as e:
+        logger.error(f"Generation failed: {e}")
+        yield f"Gemini API quota exceeded or error occurred: {e}\nPlease try again later."

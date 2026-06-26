@@ -10,20 +10,21 @@ def inject_custom_css():
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-    --bg-color: #FFFBF5;
+    --bg-color: #FAF8F4;
     --card-bg: #FFFFFF;
-    --secondary-bg: #FEE2E2;
-    --text-primary: #1F1F1F;
+    --secondary-bg: #FEE2E2; /* Slightly softer for backgrounds if needed */
+    --text-primary: #1F2937;
     --text-secondary: #6B7280;
-    --border-color: #E5E7EB;
+    --border-color: #E7E1D8;
     
-    --primary-color: #8B1E1E;
-    --primary-hover: #A71D1D;
-    --sidebar-grad-start: #8B1E1E;
-    --sidebar-grad-end: #8B1E1E;
+    --primary-color: #7A1F1F;
+    --primary-hover: #A52A2A;
+    --accent-color: #C0392B;
+    --sidebar-grad-start: #7A1F1F;
+    --sidebar-grad-end: #7A1F1F;
     
     --success-color: #16A34A;
-    --warning-color: #F59E0B;
+    --warning-color: #D97706;
     --danger-color: #DC2626;
     
     --shadow-card: 0 4px 12px rgba(0,0,0,0.04);
@@ -62,14 +63,15 @@ code, pre {
 
 /* Center Column Specific Styling to keep text readable */
 div[data-testid="column"]:nth-of-type(1) {
-    max-width: 900px !important;
+    max-width: 1400px !important;
     margin: 0 auto;
 }
 
 /* Hide Default Streamlit Elements */
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-header {visibility: hidden;}
+header { background: transparent !important; }
+header .stAppDeployButton { display: none !important; }
 
 /* LEFT SIDEBAR (18%) */
 /* Streamlit doesn't allow percentage width natively without risking broken layouts, 
@@ -346,7 +348,7 @@ div[data-testid="stChatInput"] textarea {
    ========================================= */
 
 [data-testid="stSidebar"] {
-    background-color: #7F1D1D !important;
+    background-color: #7A1F1F !important;
     border-right: none !important;
 }
 
@@ -392,7 +394,7 @@ div[data-testid="stChatInput"] textarea {
 .sidebar-group-header {
     font-size: 0.75rem !important;
     font-weight: 600 !important;
-    color: #FCA5A5 !important;
+    color: #E7E1D8 !important;
     text-transform: uppercase !important;
     margin-top: 1.5rem !important;
     margin-bottom: 0.5rem !important;

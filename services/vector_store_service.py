@@ -88,19 +88,45 @@ def build_vector_store(chunks):
 
 def get_retriever(vector_store, k=8):
     """
-    Configures and returns the retriever using standard similarity search with dense context.
+    Configures and returns the retriever using MMR and Context Compression.
     """
     if not vector_store:
         return None
         
     try:
-        retriever = vector_store.as_retriever(
-            search_type="similarity",
+        from langchain.retrievers.document_compressors import EmbeddingsFilter
+        from langchain.retrievers import ContextualCompressionRetriever
+        from config import get_embedding_model, get_google_api_key
+        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+        
+        # Base Retriever using MMR
+        base_retriever = vector_store.as_retriever(
+            search_type="mmr",
             search_kwargs={
-                "k": k
+                "k": k,
+                "fetch_k": k * 2,
+                "lambda_mult": 0.5
             }
         )
-        return retriever
+        
+        # Context Compression
+        api_key = get_google_api_key()
+        embeddings = GoogleGenerativeAIEmbeddings(
+            model=get_embedding_model(),
+            google_api_key=api_key
+        )
+        
+        embeddings_filter = EmbeddingsFilter(
+            embeddings=embeddings, 
+            similarity_threshold=0.76
+        )
+        
+        compression_retriever = ContextualCompressionRetriever(
+            base_compressor=embeddings_filter, 
+            base_retriever=base_retriever
+        )
+        
+        return compression_retriever
     except Exception as e:
         st.error(f"Failed to configure retriever: {e}")
         return None
