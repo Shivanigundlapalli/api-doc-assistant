@@ -101,12 +101,71 @@ def check_guardrails(question: str) -> bool:
             
     return True
 
-def rewrite_query(question: str) -> str:
-    """
-    Bypasses LLM rewriting for speed optimization. Returns original query.
-    """
-    return question.strip()
+from langchain_core.prompts import PromptTemplate
+from prompts.system_prompts import ANALYZER_PROMPT, COMPRESSOR_PROMPT
+import json
 
+def analyze_query(question: str, memory: list = None) -> dict:
+    """
+    LLM-powered Query Understanding.
+    Rewrites the query and categorizes the intent.
+    Returns: {"rewritten_query": str, "category": str}
+    """
+    llm = get_fallback_model() # Use faster model for routing
+    try:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        fast_llm = ChatGoogleGenerativeAI(model=llm, google_api_key=api_key, temperature=0)
+    except:
+        fast_llm = initialize_llm()
+        
+    mem_str = "\n".join([f"{m.get('role', 'user')}: {m.get('content', m.get('question', m.get('answer', '')))}" for m in (memory[-3:] if memory else [])])
+    
+    prompt = PromptTemplate.from_template(ANALYZER_PROMPT)
+    chain = prompt | fast_llm
+    
+    try:
+        res = chain.invoke({"question": question, "memory": mem_str})
+        text = res.content
+        # Extract JSON from potential markdown blocks
+        if "```json" in text:
+            text = text.split("```json")[1].split("```")[0]
+        elif "```" in text:
+            text = text.split("```")[1].split("```")[0]
+            
+        data = json.loads(text.strip())
+        return {
+            "rewritten_query": data.get("rewritten_query", question),
+            "category": data.get("category", "General")
+        }
+    except Exception as e:
+        logger.warning(f"Query analyzer failed, falling back: {e}")
+        return {"rewritten_query": question, "category": "General"}
+
+def compress_context(question: str, chunks: list) -> str:
+    """
+    LLM Context Compressor. Merges duplicates and removes noise.
+    """
+    if not chunks:
+        return ""
+        
+    llm = get_fallback_model() # Use faster model
+    try:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        fast_llm = ChatGoogleGenerativeAI(model=llm, google_api_key=api_key, temperature=0)
+    except:
+        fast_llm = initialize_llm()
+        
+    chunks_str = "\n\n".join([f"--- CHUNK {i+1} ---\n{c.page_content}" for i, c in enumerate(chunks)])
+    
+    prompt = PromptTemplate.from_template(COMPRESSOR_PROMPT)
+    chain = prompt | fast_llm
+    
+    try:
+        res = chain.invoke({"question": question, "chunks": chunks_str})
+        return res.content.strip()
+    except Exception as e:
+        logger.warning(f"Context compressor failed, falling back to raw: {e}")
+        return "\n\n".join([c.page_content for c in chunks])
 from langgraph.prebuilt import create_react_agent
 from langchain_core.tools import create_retriever_tool
 from langchain_core.tools import Tool

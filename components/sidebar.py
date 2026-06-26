@@ -53,17 +53,34 @@ def render_sidebar():
 
         # COLLECTIONS
         st.markdown("<div class='sidebar-group-header' style='margin-top: 25px;'>Collections</div>", unsafe_allow_html=True)
-        collections = st.session_state.get("collections", ["Authentication", "SDK", "REST API", "Errors", "Rate Limits", "Payments"])
         
+        # Group chats by category
+        collections = {}
+        if all_chats:
+            for chat in all_chats:
+                cat = chat.get("category", "General")
+                if cat not in collections:
+                    collections[cat] = []
+                collections[cat].append(chat)
+                
         if not collections:
             st.markdown("<div style='font-size: 0.85rem; color: rgba(255,255,255,0.5); padding: 0.5rem;'>No collections available.</div>", unsafe_allow_html=True)
         else:
-            for col in collections:
-                st.markdown(f"""
-                    <div class='sidebar-item'>
-                        <span class='sidebar-item-icon'>📁</span> {col}
-                    </div>
-                """, unsafe_allow_html=True)
+            for col_name, chats in collections.items():
+                with st.expander(f"📁 {col_name}"):
+                    for chat in chats:
+                        title = chat["title"]
+                        display_title = title if len(title) < 25 else title[:22] + "..."
+                        if st.button(f"💬 {display_title}", key=f"col_chat_{chat['id']}", use_container_width=True):
+                            st.session_state.current_chat_id = chat["id"]
+                            msgs = get_messages(chat["id"])
+                            st.session_state.chat_history = []
+                            for m in msgs:
+                                if m["role"] == "user":
+                                    st.session_state.chat_history.append({"role": "user", "question": m["content"]})
+                                else:
+                                    st.session_state.chat_history.append({"role": "assistant", "answer": m["content"], "sources": m.get("sources", [])})
+                            st.rerun()
 
         # Bottom Navigation (Settings)
         st.markdown("""

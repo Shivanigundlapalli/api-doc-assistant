@@ -39,26 +39,37 @@ Every answer must STRICTLY follow this markdown layout (omit sections if entirel
 
 RETRIEVAL_PROMPT = """You must answer ONLY using the retrieved documentation context."""
 
-# 2. Query Rewriting Prompt
-REWRITE_PROMPT = """You are an AI assistant specialized in query optimization for API documentation search.
-Your task is to rewrite vague or short user queries into specific, detailed search queries.
-This helps the retrieval engine find the most relevant documentation.
+# 2. Query Analyzer Prompt
+ANALYZER_PROMPT = """You are an AI assistant specialized in query optimization for API documentation search.
+Your task is to analyze the user query and conversation history, rewrite the query to be specific for semantic search, and categorize the intent.
 
-Examples:
-User Query: "login issue"
-Rewritten Query: "authentication failure errors troubleshoot"
+Categories: Authentication, Rate Limits, Errors, SDK, REST API, General
 
-User Query: "api key problem"
-Rewritten Query: "API key authentication errors missing token"
-
-Rewrite the following query to be more specific, keeping it concise but adding necessary context.
-If the query is already specific enough, just output the original query.
-Do not output anything other than the rewritten query.
+Output STRICTLY JSON. Example:
+{
+  "rewritten_query": "API Key expiration renewal troubleshoot",
+  "category": "Authentication"
+}
 
 User Query: {question}
-Rewritten Query:"""
+Conversation History: {memory}
+"""
 
-# 3. Guardrails Prompt
+# 3. Context Compressor Prompt
+COMPRESSOR_PROMPT = """You are a Context Compressor.
+Read the retrieved documentation chunks.
+Merge duplicate information, remove boilerplate/noise, and return a clean, dense summary of the facts relevant to the user query.
+Keep ALL technical details, code snippets, and exact parameter names intact.
+If the chunks are irrelevant to the query, return "IRRELEVANT".
+
+User Query: {question}
+
+Raw Chunks:
+{chunks}
+
+Dense Context:"""
+
+# 4. Guardrails Prompt
 GUARDRAILS_PROMPT = """You are a strict safety and relevance classifier for an API Documentation Assistant.
 Your task is to classify whether a user query is safe and relevant to technical API documentation.
 

@@ -20,10 +20,19 @@ def init_db():
         CREATE TABLE IF NOT EXISTS chats (
             id TEXT PRIMARY KEY,
             title TEXT,
+            category TEXT DEFAULT 'General',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    
+    # Handle schema migration if 'category' column is missing from an existing database
+    try:
+        cursor.execute("ALTER TABLE chats ADD COLUMN category TEXT DEFAULT 'General'")
+    except sqlite3.OperationalError:
+        # Column already exists
+        pass
+        
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS messages (
             id TEXT PRIMARY KEY,
@@ -43,8 +52,8 @@ def create_chat(title: str = "New Conversation") -> str:
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO chats (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)",
-        (chat_id, title, datetime.now(), datetime.now())
+        "INSERT INTO chats (id, title, category, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+        (chat_id, title, 'General', datetime.now(), datetime.now())
     )
     conn.commit()
     conn.close()
@@ -126,6 +135,13 @@ def update_chat_title(chat_id: str, new_title: str):
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("UPDATE chats SET title = ?, updated_at = ? WHERE id = ?", (new_title, datetime.now(), chat_id))
+    conn.commit()
+    conn.close()
+
+def update_chat_category(chat_id: str, category: str):
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE chats SET category = ?, updated_at = ? WHERE id = ?", (category, datetime.now(), chat_id))
     conn.commit()
     conn.close()
 

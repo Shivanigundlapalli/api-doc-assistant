@@ -230,16 +230,21 @@ if query:
             st.error(f"Error checking guardrails: {e}")
             st.stop()
             
-    # 3. Query Rewriting
-    with st.spinner("Optimizing search..."):
+    # 3. Query Understanding & Rewriting (Analyzer)
+    from services.llm_service import analyze_query, compress_context
+    with st.spinner("Analyzing query..."):
         try:
-            optimized_query = rewrite_query(query)
+            analysis = analyze_query(query, st.session_state.get("chat_history", []))
+            optimized_query = analysis["rewritten_query"]
+            category = analysis["category"]
+            
             if optimized_query != query:
                 st.caption(f"Optimized search: *{optimized_query}*")
         except Exception as e:
             optimized_query = query
+            category = "General"
             
-    # 4. Retrieval & Answer Generation
+    # 4. Retrieval, Compression & Answer Generation
     with st.spinner("Searching documentation..."):
         try:
             if not retriever:
@@ -253,11 +258,15 @@ if query:
                 st.session_state.retrieval_cache[optimized_query] = raw_docs
                 
             docs = deduplicate_docs(raw_docs)
-            context = "\n\n".join([doc.page_content for doc in docs])
             
-            answer_stream = generate_answer(optimized_query, context, memory=st.session_state.get("chat_history", []), retriever=retriever)
+            # Step 7: Context Compression
+            with st.spinner("Compressing context..."):
+                compressed_context = compress_context(optimized_query, docs)
             
-            # 5. Stream Response into Native UI
+            # Step 8-11: Agent Reasoning & Streaming
+            answer_stream = generate_answer(optimized_query, compressed_context, memory=st.session_state.get("chat_history", []), retriever=retriever)
+            
+            # Stream Response into Native UI
             with st.chat_message("assistant", avatar="🤖"):
                 st.caption("✨ Synthesizing response...")
                 answer = st.write_stream(answer_stream)
@@ -267,6 +276,8 @@ if query:
                 
                 if is_debug_mode():
                     with st.expander("🔍 Query Telemetry (Admin)", expanded=False):
+                        st.caption(f"**Intent Category:** {category}")
+                        st.caption(f"**Compressed Context Length:** {len(compressed_context)} chars")
                         st.caption(f"Retrieved {len(docs)} document chunks.")
                         for i, doc in enumerate(docs):
                             st.caption(f"**Chunk {i+1} Metadata:** {doc.metadata}")
@@ -276,6 +287,10 @@ if query:
             
             source_dicts = [{"content": d.page_content, "metadata": d.metadata} for d in docs]
             add_message(st.session_state.current_chat_id, "assistant", answer, sources=source_dicts)
+            
+            # Update Category
+            from utils.memory_manager import update_chat_category
+            update_chat_category(st.session_state.current_chat_id, category)
             
             st.rerun()
         except Exception as e:
