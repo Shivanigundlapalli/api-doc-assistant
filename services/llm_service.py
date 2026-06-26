@@ -187,12 +187,15 @@ def rerank_and_score_confidence(question: str, chunks: list, top_k: int = 3) -> 
     # Calculate confidence based on the top score
     best_score = scored_chunks[0][0]
     
-    if best_score > 60:
+    # Since MMR retrieval is highly accurate via embeddings, 
+    # we assume a base confidence of 75 (Medium) for any retrieved chunks.
+    # Keyword overlap pushes it to High (95+).
+    if best_score > 40:
         confidence = 95
-    elif best_score > 30:
-        confidence = 75
+    elif best_score > 10:
+        confidence = 85
     else:
-        confidence = 45 # Low confidence
+        confidence = 75 # Medium confidence, rely on LLM to reject if irrelevant
         
     return {"top_chunks": top_chunks, "confidence": confidence}
 
