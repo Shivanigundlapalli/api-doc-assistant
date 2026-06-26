@@ -84,6 +84,9 @@ def build_vector_store(chunks):
         )
         return vector_store
     except Exception as e:
+        st.error(f"Failed to build vector store: {e}")
+        return None
+
 def get_retriever(vector_store, k=8):
     """
     Configures and returns the retriever using MMR.
