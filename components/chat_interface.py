@@ -102,4 +102,4 @@ def render_enterprise_answer(parsed: dict, sources: list, msg_index: int = 0):
         </div>
     """, unsafe_allow_html=True)
     
-    return active_sources
+    return sources

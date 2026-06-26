@@ -53,7 +53,12 @@ def create_chat(title: str = "New Conversation") -> str:
 def get_all_chats() -> List[Dict[str, Any]]:
     conn = _get_conn()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM chats ORDER BY updated_at DESC")
+    cursor.execute("""
+        SELECT c.* 
+        FROM chats c
+        WHERE EXISTS (SELECT 1 FROM messages m WHERE m.chat_id = c.id)
+        ORDER BY c.updated_at DESC
+    """)
     chats = [dict(row) for row in cursor.fetchall()]
     conn.close()
     return chats
@@ -79,10 +84,20 @@ def add_message(chat_id: str, role: str, content: str, sources: List[Dict[str, A
         "INSERT INTO messages (id, chat_id, role, content, sources, created_at) VALUES (?, ?, ?, ?, ?, ?)",
         (msg_id, chat_id, role, content, sources_json, datetime.now())
     )
-    cursor.execute(
-        "UPDATE chats SET updated_at = ? WHERE id = ?",
-        (datetime.now(), chat_id)
-    )
+    
+    # Auto-update title if it's the first user message
+    cursor.execute("SELECT COUNT(*) FROM messages WHERE chat_id = ?", (chat_id,))
+    count = cursor.fetchone()[0]
+    
+    if count == 1 and role == "user":
+        title = content[:25] + "..." if len(content) > 25 else content
+        cursor.execute("UPDATE chats SET title = ?, updated_at = ? WHERE id = ?", (title, datetime.now(), chat_id))
+    else:
+        cursor.execute(
+            "UPDATE chats SET updated_at = ? WHERE id = ?",
+            (datetime.now(), chat_id)
+        )
+        
     conn.commit()
     conn.close()
 

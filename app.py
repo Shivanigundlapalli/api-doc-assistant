@@ -290,6 +290,16 @@ with right_col:
     if st.session_state.active_sources:
         st.markdown("### Sources")
         for idx, src in enumerate(st.session_state.active_sources):
-            st.markdown(f"**Source {idx+1}**: {src.metadata.get('source', 'Unknown')}")
+            if isinstance(src, dict):
+                metadata = src.get("metadata", {})
+                content = src.get("content", "")
+            else:
+                metadata = getattr(src, "metadata", {})
+                content = getattr(src, "page_content", "")
+                
+            source_name = metadata.get('source', metadata.get('name', 'Unknown'))
+            display_name = str(source_name).split('/')[-1].split('\\')[-1]
+            
+            st.markdown(f"**Source {idx+1}**: {display_name}")
             with st.expander("View excerpt"):
-                st.markdown(src.page_content)
+                st.markdown(content)
