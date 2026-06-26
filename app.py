@@ -289,7 +289,7 @@ if query:
             render_source_chips(top_docs)
             
         # Confidence Badge
-        if confidence >= 85:
+        if confidence >= 90:
             st.markdown(f"<div style='margin-top: 15px; font-size: 0.85rem; color: #16A34A; background-color: #DCFCE7; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 12px; font-weight: 500;'>🛡️ Verified by Documentation | {confidence}% Confidence | {len(top_docs)} chunks used</div>", unsafe_allow_html=True)
         else:
             st.markdown(f"<div style='margin-top: 15px; font-size: 0.85rem; color: #B45309; background-color: #FEF3C7; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 12px; font-weight: 500;'>⚠️ Medium Confidence | {confidence}% | Answer carefully</div>", unsafe_allow_html=True)

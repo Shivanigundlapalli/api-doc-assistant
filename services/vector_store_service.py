@@ -87,7 +87,7 @@ def build_vector_store(chunks):
         st.error(f"Failed to build vector store: {e}")
         return None
 
-def get_retriever(vector_store, k=8):
+def get_retriever(vector_store, k=10):
     """
     Configures and returns the retriever using MMR.
     """
@@ -100,7 +100,7 @@ def get_retriever(vector_store, k=8):
             search_type="mmr",
             search_kwargs={
                 "k": k,
-                "fetch_k": k * 2,
+                "fetch_k": 20,
                 "lambda_mult": 0.5
             }
         )

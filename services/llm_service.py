@@ -107,204 +107,130 @@ import json
 
 def analyze_query(question: str, memory: list = None) -> dict:
     """
-    LLM-powered Query Understanding.
-    Rewrites the query and categorizes the intent.
-    Returns: {"rewritten_query": str, "category": str}
+    Fast heuristics-based Query Understanding.
+    Rewrites the query using conversation memory without a slow LLM call.
     """
-    llm = get_fallback_model() # Use faster model for routing
-    try:
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        fast_llm = ChatGoogleGenerativeAI(model=llm, google_api_key=api_key, temperature=0)
-    except:
-        fast_llm = initialize_llm()
+    category = "General"
+    question_lower = question.lower()
+    
+    # Intent Detection Heuristics
+    if any(k in question_lower for k in ["auth", "token", "key", "secret", "oauth"]):
+        category = "Authentication"
+    elif any(k in question_lower for k in ["error", "400", "401", "404", "500", "fail", "bug"]):
+        category = "Errors"
+    elif any(k in question_lower for k in ["rate", "limit", "quota", "maximum", "exceed"]):
+        category = "Rate Limits"
+    elif any(k in question_lower for k in ["sdk", "python", "javascript", "curl"]):
+        category = "SDK & Examples"
         
-    mem_str = "\n".join([f"{m.get('role', 'user')}: {m.get('content', m.get('question', m.get('answer', '')))}" for m in (memory[-3:] if memory else [])])
-    
-    prompt = PromptTemplate.from_template(ANALYZER_PROMPT)
-    chain = prompt | fast_llm
-    
-    try:
-        res = chain.invoke({"question": question, "memory": mem_str})
-        text = res.content
-        # Extract JSON from potential markdown blocks
-        if "```json" in text:
-            text = text.split("```json")[1].split("```")[0]
-        elif "```" in text:
-            text = text.split("```")[1].split("```")[0]
+    # Simple Contextual Rewrite based on memory
+    rewritten_query = question
+    if memory and len(question.split()) <= 3:
+        last_q = memory[-1].get("question", "")
+        if "key" in question_lower or "it" in question_lower:
+            rewritten_query = f"{last_q} {question}"
             
-        data = json.loads(text.strip())
-        return {
-            "rewritten_query": data.get("rewritten_query", question),
-            "category": data.get("category", "General")
-        }
-    except Exception as e:
-        logger.warning(f"Query analyzer failed, falling back: {e}")
-        return {"rewritten_query": question, "category": "General"}
+    return {"rewritten_query": rewritten_query, "category": category}
 
 def compress_context(question: str, chunks: list) -> str:
     """
-    LLM Context Compressor. Merges duplicates and removes noise.
+    Fast string-based context compressor.
+    Removes exact duplicates and limits total characters to avoid context bloat.
     """
-    if not chunks:
-        return ""
-        
-    llm = get_fallback_model() # Use faster model
-    try:
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        fast_llm = ChatGoogleGenerativeAI(model=llm, google_api_key=api_key, temperature=0)
-    except:
-        fast_llm = initialize_llm()
-        
-    chunks_str = "\n\n".join([f"--- CHUNK {i+1} ---\n{c.page_content}" for i, c in enumerate(chunks)])
+    seen = set()
+    compressed = []
     
-    prompt = PromptTemplate.from_template(COMPRESSOR_PROMPT)
-    chain = prompt | fast_llm
-    
-    try:
-        res = chain.invoke({"question": question, "chunks": chunks_str})
-        return res.content.strip()
-    except Exception as e:
-        logger.warning(f"Context compressor failed, falling back to raw: {e}")
-        return "\n\n".join([c.page_content for c in chunks])
+    for c in chunks:
+        # Simple deduplication by first 100 characters
+        sig = c.page_content[:100]
+        if sig not in seen:
+            seen.add(sig)
+            compressed.append(c.page_content)
+            
+    # Join and limit to ~15,000 characters
+    return "\n\n---\n\n".join(compressed)[:15000]
 
 def rerank_and_score_confidence(question: str, chunks: list, top_k: int = 3) -> dict:
     """
-    Reranks chunks and calculates a confidence score (0-100).
-    Returns: {"top_chunks": [...], "confidence": 92}
+    Fast Lexical & Semantic Reranker.
+    Uses keyword overlap to score and rank chunks instantly.
     """
     if not chunks:
         return {"top_chunks": [], "confidence": 0}
         
-    llm = get_fallback_model()
-    try:
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        fast_llm = ChatGoogleGenerativeAI(model=llm, google_api_key=api_key, temperature=0)
-    except:
-        fast_llm = initialize_llm()
+    question_terms = set(re.findall(r'\w+', question.lower()))
+    
+    scored_chunks = []
+    for chunk in chunks:
+        content_lower = chunk.page_content.lower()
+        chunk_terms = set(re.findall(r'\w+', content_lower))
         
-    chunks_str = "\n\n".join([f"ID: {i}\nContent: {c.page_content}" for i, c in enumerate(chunks)])
-    
-    prompt = PromptTemplate.from_template(
-        "You are an expert search reranker.\n"
-        "User Query: {question}\n\n"
-        "Retrieved Chunks:\n{chunks_str}\n\n"
-        "Evaluate the chunks against the query. Identify the top 3 most relevant chunk IDs. "
-        "Also assign a confidence score (0-100) indicating how well these chunks answer the query completely. "
-        "If the answer is completely missing, confidence should be < 50.\n"
-        "Output strictly JSON format: {{\"top_ids\": [0, 2, 4], \"confidence\": 95}}"
-    )
-    chain = prompt | fast_llm
-    
-    try:
-        res = chain.invoke({"question": question, "chunks_str": chunks_str})
-        text = res.content
-        if "```json" in text:
-            text = text.split("```json")[1].split("```")[0]
-        elif "```" in text:
-            text = text.split("```")[1].split("```")[0]
-            
-        data = json.loads(text.strip())
-        top_ids = data.get("top_ids", list(range(min(top_k, len(chunks)))))
-        confidence = data.get("confidence", 50)
+        # Calculate Jaccard-like overlap score
+        overlap = len(question_terms.intersection(chunk_terms))
+        score = (overlap / max(len(question_terms), 1)) * 100
         
-        top_chunks = [chunks[i] for i in top_ids if i < len(chunks)][:top_k]
+        # Boost score if exact phrase matches
+        if question.lower() in content_lower:
+            score += 30
+            
+        # Boost for API specifics
+        if "api" in question_lower and "endpoint" in content_lower:
+            score += 10
+            
+        scored_chunks.append((score, chunk))
         
-        # If the LLM failed to return valid IDs, fallback to original top_k
-        if not top_chunks:
-            top_chunks = chunks[:top_k]
-            
-        return {"top_chunks": top_chunks, "confidence": confidence}
-    except Exception as e:
-        logger.warning(f"Reranker failed, falling back: {e}")
-        return {"top_chunks": chunks[:top_k], "confidence": 60}
-from langgraph.prebuilt import create_react_agent
-from langchain_core.tools import create_retriever_tool
-from langchain_core.tools import Tool
-from langchain_core.messages import SystemMessage, HumanMessage
-
-def get_agent_executor(retriever):
-    """
-    Initializes a LangChain Agent with tools and the production system prompt.
-    """
-    llm = initialize_llm()
+    # Sort by score descending
+    scored_chunks.sort(key=lambda x: x[0], reverse=True)
     
-    # 1. Retriever Tool
-    retriever_tool = create_retriever_tool(
-        retriever,
-        "search_api_documentation",
-        "Searches and returns excerpts from the API documentation. You MUST use this tool first to find relevant context for the user's question."
-    )
+    top_chunks = [c for score, c in scored_chunks[:top_k]]
     
-    # 2. Calculator Tool
-    def calculate(expression: str) -> str:
-        try:
-            return str(eval(expression, {"__builtins__": None}, {}))
-        except Exception as e:
-            return f"Error: {e}"
-            
-    calculator_tool = Tool.from_function(
-        func=calculate,
-        name="calculator",
-        description="Useful for when you need to answer questions about math or rate limits."
-    )
+    # Calculate confidence based on the top score
+    best_score = scored_chunks[0][0]
     
-    tools = [retriever_tool, calculator_tool]
-    
-    # We use the QA_SYSTEM_PROMPT as the state modifier to enforce grounding and format
-    agent_executor = create_react_agent(llm, tools, state_modifier=QA_SYSTEM_PROMPT)
-    
-    return agent_executor
+    if best_score > 60:
+        confidence = 95
+    elif best_score > 30:
+        confidence = 75
+    else:
+        confidence = 45 # Low confidence
+        
+    return {"top_chunks": top_chunks, "confidence": confidence}
 
 def generate_answer(question: str, context: str, memory=None, retriever=None) -> str:
     """
-    Generates an answer using a full LangChain Agent.
-    Implements validation (len > 20), failover retries, and detailed telemetry.
-    The 'context' argument is kept for signature compatibility but ignored, as the Agent handles retrieval.
+    Generates an answer using a fast, single-pass LCEL Chain.
+    Replaces the slow ReAct agent to prevent duplicated retrieval.
     """
     start_time = time.time()
     
-    if not retriever:
-        yield "Vector database is not initialized. Please add documents."
-        return
-
-    # Format Memory and Context
-    chat_history = []
+    # Format Memory
+    chat_history = ""
     if memory:
-        for m in memory[-3:]: # Include last 3 interactions
-            chat_history.append(HumanMessage(content=m.get('question', '')))
-            chat_history.append(SystemMessage(content=m.get('answer', '')))
+        chat_history = "\n".join([f"User: {m.get('question', '')}\nAssistant: {m.get('answer', '')}" for m in memory[-3:]])
             
-    # Inject pre-retrieved context into the first message to force grounding
-    initial_prompt = f"Retrieved Documentation Context:\n{context}\n\nUser Question: {question}"
-            
-    chain_input = {
-        "messages": chat_history + [HumanMessage(content=initial_prompt)]
-    }
+    prompt = PromptTemplate.from_template(
+        QA_SYSTEM_PROMPT + "\n\n"
+        "--- CONVERSATION HISTORY ---\n{chat_history}\n\n"
+        "--- RETRIEVED DOCUMENTATION ---\n{context}\n\n"
+        "User Question: {question}"
+    )
 
     # Failover & Retry Execution
     max_retries = 2
     for attempt in range(max_retries):
         try:
             llm_start_time = time.time()
-            agent_executor = get_agent_executor(retriever)
+            llm = initialize_llm()
+            chain = prompt | llm | StrOutputParser()
             
             full_response = ""
-            for event in agent_executor.stream(chain_input, stream_mode="values"):
-                # values mode returns the full state at each step
-                message = event["messages"][-1]
-                
-                # If it's an AIMessage with tool calls
-                if hasattr(message, "tool_calls") and message.tool_calls:
-                    for tc in message.tool_calls:
-                        yield f"🤔 *Thinking: Using {tc['name']}...*\n\n"
-                        
-                # If it's a final text response from AI (not a tool call)
-                elif message.type == "ai" and message.content and not hasattr(message, "tool_calls"):
-                    # We just yield the difference since stream_mode="values" gives the full content
-                    chunk = message.content[len(full_response):]
-                    if chunk:
-                        full_response = message.content
-                        yield chunk
+            for chunk in chain.stream({
+                "chat_history": chat_history,
+                "context": context,
+                "question": question
+            }):
+                full_response += chunk
+                yield chunk
                 
             llm_end_time = time.time()
             llm_time = llm_end_time - llm_start_time
@@ -326,7 +252,6 @@ def generate_answer(question: str, context: str, memory=None, retriever=None) ->
             print(f"LLM Time: {llm_time:.3f}s")
             print(f"Total Generation Time: {total_time:.3f}s")
             print(f"Answer Length: {len(full_response)} chars")
-            print(f"Model Used: {get_primary_model() if attempt == 0 else get_fallback_model()}")
             print("="*50 + "\n")
             
             return
@@ -334,4 +259,4 @@ def generate_answer(question: str, context: str, memory=None, retriever=None) ->
         except Exception as e:
             logger.error(f"Generation failed on attempt {attempt + 1}: {e}")
             if attempt == max_retries - 1:
-                yield "An unexpected error occurred while generating the answer. Please ensure your API keys and quotas are valid, and try again."
+                yield "The AI service is temporarily unavailable. Please try again."
