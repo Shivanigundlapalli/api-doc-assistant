@@ -178,25 +178,19 @@ render_sidebar()
 # Main Chat Interface & Right Panel
 # ==========================
 
-chat_col, right_col = st.columns([7, 3])
+st.markdown("<style>.stMainBlockContainer { max-width: 900px; padding-top: 2rem; }</style>", unsafe_allow_html=True)
 
-with chat_col:
-    if not st.session_state.chat_history:
-        render_hero()
+if not st.session_state.chat_history:
+    render_hero()
 
-    # Chat History
-    for i, msg in enumerate(st.session_state.get("chat_history", [])):
-        with st.chat_message(msg.get("role", "user")):
-            if msg.get("role", "user") == "user":
-                st.markdown(msg.get("question", msg.get("content", "")))
-            else:
-                from utils.parser import parse_enterprise_answer
-                from components.chat_interface import render_enterprise_answer
-                
-                parsed = parse_enterprise_answer(msg.get("answer", msg.get("content", "")))
-                active_sources = render_enterprise_answer(parsed, msg.get("sources", []), msg_index=i)
-                if active_sources:
-                    st.session_state.active_sources = active_sources
+# Chat History
+from components.chat_interface import render_source_chips
+
+for i, msg in enumerate(st.session_state.get("chat_history", [])):
+    with st.chat_message(msg.get("role", "user")):
+        st.markdown(msg.get("answer", msg.get("question", msg.get("content", ""))))
+        if msg.get("role") == "assistant" and msg.get("sources"):
+            render_source_chips(msg.get("sources"))
 
 if st.session_state.pending_query:
     query = st.session_state.pending_query
@@ -216,90 +210,74 @@ else:
     query = st.chat_input("Ask anything about your API documentation...")
 
 if query:
-    with chat_col:
-        # 1. Render User Message
-        with st.chat_message("user"):
-            st.markdown(query)
-            
-        add_message(st.session_state.current_chat_id, "user", query)
+    # 1. Render User Message
+    with st.chat_message("user"):
+        st.markdown(query)
         
-        # 2. Guardrails Check
-        with st.spinner("Analyzing query..."):
-            try:
-                if not check_guardrails(query):
-                    err_msg = "I can answer only questions related to the uploaded documentation."
-                    with st.chat_message("assistant", avatar="🤖"):
-                        st.markdown(err_msg)
-                    st.session_state.chat_history.append({"role": "user", "question": query})
-                    st.session_state.chat_history.append({"role": "assistant", "answer": err_msg, "sources": []})
-                    add_message(st.session_state.current_chat_id, "assistant", err_msg)
-                    st.stop()
-            except Exception as e:
-                st.error(f"Error checking guardrails: {e}")
+    add_message(st.session_state.current_chat_id, "user", query)
+    
+    # 2. Guardrails Check
+    with st.spinner("Analyzing query..."):
+        try:
+            if not check_guardrails(query):
+                err_msg = "I can answer only questions related to the uploaded documentation."
+                with st.chat_message("assistant", avatar="🤖"):
+                    st.markdown(err_msg)
+                st.session_state.chat_history.append({"role": "user", "question": query})
+                st.session_state.chat_history.append({"role": "assistant", "answer": err_msg, "sources": []})
+                add_message(st.session_state.current_chat_id, "assistant", err_msg)
+                st.stop()
+        except Exception as e:
+            st.error(f"Error checking guardrails: {e}")
+            st.stop()
+            
+    # 3. Query Rewriting
+    with st.spinner("Optimizing search..."):
+        try:
+            optimized_query = rewrite_query(query)
+            if optimized_query != query:
+                st.caption(f"Optimized search: *{optimized_query}*")
+        except Exception as e:
+            optimized_query = query
+            
+    # 4. Retrieval & Answer Generation
+    with st.spinner("Searching documentation..."):
+        try:
+            if not retriever:
+                st.error("Vector database is not initialized. Please add documents.")
                 st.stop()
                 
-        # 3. Query Rewriting
-        with st.spinner("Optimizing search..."):
-            try:
-                optimized_query = rewrite_query(query)
-                if optimized_query != query:
-                    st.caption(f"Optimized search: *{optimized_query}*")
-            except Exception as e:
-                optimized_query = query
-                
-        # 4. Retrieval & Answer Generation
-        with st.spinner("Searching documentation..."):
-            try:
-                if not retriever:
-                    st.error("Vector database is not initialized. Please add documents.")
-                    st.stop()
-                    
-                if optimized_query in st.session_state.retrieval_cache:
-                    raw_docs = st.session_state.retrieval_cache[optimized_query]
-                else:
-                    raw_docs = retriever.invoke(optimized_query)
-                    st.session_state.retrieval_cache[optimized_query] = raw_docs
-                    
-                docs = deduplicate_docs(raw_docs)
-                context = "\n\n".join([doc.page_content for doc in docs])
-                
-                answer_stream = generate_answer(optimized_query, context, memory=st.session_state.get("chat_history", []), retriever=retriever)
-                
-                # 5. Stream Response into Native UI
-                with st.chat_message("assistant", avatar="🤖"):
-                    st.caption("✨ Generating structural response...")
-                    answer = st.write_stream(answer_stream)
-                    
-                    if is_debug_mode():
-                        with st.expander("🔍 Query Telemetry (Admin)", expanded=False):
-                            st.caption(f"Retrieved {len(docs)} document chunks.")
-                            for i, doc in enumerate(docs):
-                                st.caption(f"**Chunk {i+1} Metadata:** {doc.metadata}")
-                
-                st.session_state.chat_history.append({"role": "user", "question": query})
-                st.session_state.chat_history.append({"role": "assistant", "answer": answer, "sources": docs})
-                
-                source_dicts = [{"content": d.page_content, "metadata": d.metadata} for d in docs]
-                add_message(st.session_state.current_chat_id, "assistant", answer, sources=source_dicts)
-                
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error during retrieval or answer generation: {e}")
-
-with right_col:
-    if st.session_state.active_sources:
-        st.markdown("### Sources")
-        for idx, src in enumerate(st.session_state.active_sources):
-            if isinstance(src, dict):
-                metadata = src.get("metadata", {})
-                content = src.get("content", "")
+            if optimized_query in st.session_state.retrieval_cache:
+                raw_docs = st.session_state.retrieval_cache[optimized_query]
             else:
-                metadata = getattr(src, "metadata", {})
-                content = getattr(src, "page_content", "")
+                raw_docs = retriever.invoke(optimized_query)
+                st.session_state.retrieval_cache[optimized_query] = raw_docs
                 
-            source_name = metadata.get('source', metadata.get('name', 'Unknown'))
-            display_name = str(source_name).split('/')[-1].split('\\')[-1]
+            docs = deduplicate_docs(raw_docs)
+            context = "\n\n".join([doc.page_content for doc in docs])
             
-            st.markdown(f"**Source {idx+1}**: {display_name}")
-            with st.expander("View excerpt"):
-                st.markdown(content)
+            answer_stream = generate_answer(optimized_query, context, memory=st.session_state.get("chat_history", []), retriever=retriever)
+            
+            # 5. Stream Response into Native UI
+            with st.chat_message("assistant", avatar="🤖"):
+                st.caption("✨ Synthesizing response...")
+                answer = st.write_stream(answer_stream)
+                
+                if docs:
+                    render_source_chips(docs)
+                
+                if is_debug_mode():
+                    with st.expander("🔍 Query Telemetry (Admin)", expanded=False):
+                        st.caption(f"Retrieved {len(docs)} document chunks.")
+                        for i, doc in enumerate(docs):
+                            st.caption(f"**Chunk {i+1} Metadata:** {doc.metadata}")
+            
+            st.session_state.chat_history.append({"role": "user", "question": query})
+            st.session_state.chat_history.append({"role": "assistant", "answer": answer, "sources": docs})
+            
+            source_dicts = [{"content": d.page_content, "metadata": d.metadata} for d in docs]
+            add_message(st.session_state.current_chat_id, "assistant", answer, sources=source_dicts)
+            
+            st.rerun()
+        except Exception as e:
+            st.error(f"Error during retrieval or answer generation: {e}")
