@@ -65,13 +65,6 @@ def get_all_chats() -> List[Dict[str, Any]]:
     cursor.execute("""
         SELECT c.* 
         FROM chats c
-        WHERE EXISTS (
-            SELECT 1 FROM messages m 
-            WHERE m.chat_id = c.id 
-            AND m.content IS NOT NULL 
-            AND m.content != 'None' 
-            AND m.content != ''
-        )
         ORDER BY c.updated_at DESC
     """)
     chats = [dict(row) for row in cursor.fetchall()]
@@ -112,7 +105,7 @@ def add_message(chat_id: str, role: str, content: str, sources: List[Dict[str, A
     count = cursor.fetchone()[0]
     
     if count == 1 and role == "user":
-        title = content[:25] + "..." if len(content) > 25 else content
+        title = content[:35] + "..." if len(content) > 35 else content
         cursor.execute("UPDATE chats SET title = ?, updated_at = ? WHERE id = ?", (title, datetime.now(), chat_id))
     else:
         cursor.execute(

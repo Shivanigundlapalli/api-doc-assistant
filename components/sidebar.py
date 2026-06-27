@@ -32,13 +32,14 @@ def render_sidebar():
         # CHAT HISTORY
         st.markdown("<div class='sidebar-group-header'>Recent Chats</div>", unsafe_allow_html=True)
         all_chats = get_all_chats()
+        recent_chats = all_chats[:5] if all_chats else []
         
-        if not all_chats:
+        if not recent_chats:
             st.markdown("<div style='font-size: 0.85rem; color: rgba(255,255,255,0.5); padding: 0.5rem;'>No conversations yet.</div>", unsafe_allow_html=True)
         else:
-            for chat in all_chats:
+            for chat in recent_chats:
                 title = chat["title"]
-                display_title = title if len(title) < 25 else title[:22] + "..."
+                display_title = title if len(title) <= 35 else title[:35] + "..."
                 if st.button(f"💬 {display_title}", key=f"chat_{chat['id']}", use_container_width=True):
                     st.session_state.current_chat_id = chat["id"]
                     # Restore messages
@@ -56,21 +57,29 @@ def render_sidebar():
         
         # Group chats by category
         collections = {}
+        collection_order = []
         if all_chats:
             for chat in all_chats:
                 cat = chat.get("category", "General")
+                if cat == "General":
+                    continue
                 if cat not in collections:
                     collections[cat] = []
+                    collection_order.append(cat)
                 collections[cat].append(chat)
                 
-        if not collections:
-            st.markdown("<div style='font-size: 0.85rem; color: rgba(255,255,255,0.5); padding: 0.5rem;'>No collections available.</div>", unsafe_allow_html=True)
+        # Limit to top 2 collections
+        top_collections = collection_order[:2]
+                
+        if not top_collections:
+            st.markdown("<div style='font-size: 0.85rem; color: rgba(255,255,255,0.5); padding: 0.5rem;'>No collections yet.</div>", unsafe_allow_html=True)
         else:
-            for col_name, chats in collections.items():
+            for col_name in top_collections:
+                chats = collections[col_name][:2]  # Limit to 2 files/chats per collection
                 with st.expander(f"📁 {col_name}"):
                     for chat in chats:
                         title = chat["title"]
-                        display_title = title if len(title) < 25 else title[:22] + "..."
+                        display_title = title if len(title) <= 35 else title[:35] + "..."
                         if st.button(f"💬 {display_title}", key=f"col_chat_{chat['id']}", use_container_width=True):
                             st.session_state.current_chat_id = chat["id"]
                             msgs = get_messages(chat["id"])

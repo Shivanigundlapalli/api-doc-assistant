@@ -15,11 +15,11 @@ def get_config(key: str, default: str = None) -> str:
     
     return os.getenv(key, default)
 
-def get_google_api_key() -> str:
-    """Retrieves the Google API Key. Raises an error if missing."""
+def get_google_api_key() -> str | None:
+    """Retrieves the Google API Key. Returns None if missing."""
     key = get_config("GOOGLE_API_KEY")
     if not key or key == "YOUR_GEMINI_KEY_HERE":
-        raise ValueError("GOOGLE_API_KEY is not configured in Streamlit Secrets or .env.")
+        return None
     return key
 
 def get_openai_api_key() -> str | None:

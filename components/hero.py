@@ -15,19 +15,16 @@ def render_hero():
     st.markdown("""
         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 2rem;" class="animated-fade">
             <button class="prompt-pill" onclick="document.querySelector('input').value='How do I authenticate?';">
-                🔑 How do I authenticate?
+                How do I authenticate?
             </button>
             <button class="prompt-pill" onclick="document.querySelector('input').value='What are the rate limits?';">
-                ⏱️ What are the rate limits?
+                What are the rate limits?
             </button>
-            <button class="prompt-pill" onclick="document.querySelector('input').value='Fix 401 Unauthorized';">
-                🐛 Fix 401 Unauthorized
+            <button class="prompt-pill" onclick="document.querySelector('input').value='Show Python examples';">
+                Show Python examples
             </button>
-            <button class="prompt-pill" onclick="document.querySelector('input').value='Show code examples';">
-                💻 Show code examples
-            </button>
-            <button class="prompt-pill" onclick="document.querySelector('input').value='Explain this error';">
-                ⚠️ Explain this error
+            <button class="prompt-pill" onclick="document.querySelector('input').value='Explain 401 Unauthorized';">
+                Explain 401 Unauthorized
             </button>
         </div>
     """, unsafe_allow_html=True)

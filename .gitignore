@@ -16,3 +16,6 @@ __pycache__/
 
 # Vector Databases
 chroma_db/
+
+data/
+logs/
