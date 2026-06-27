@@ -122,12 +122,23 @@ def build_vector_store(chunks: list, docs_dir: str):
         
         embeddings = get_embeddings()
         
-        ids = [hashlib.md5(chunk.page_content.encode('utf-8')).hexdigest() for chunk in chunks]
+        # Deduplicate chunks to prevent Chroma ValueError (Expected IDs to be unique)
+        unique_chunks = []
+        ids = []
+        seen = set()
+        
+        for chunk in chunks:
+            # Hash both content and metadata to be safe
+            chunk_hash = hashlib.md5((chunk.page_content + str(chunk.metadata)).encode('utf-8')).hexdigest()
+            if chunk_hash not in seen:
+                seen.add(chunk_hash)
+                unique_chunks.append(chunk)
+                ids.append(chunk_hash)
         
         @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=2, max=20))
         def _safe_embed():
             return Chroma.from_documents(
-                documents=chunks,
+                documents=unique_chunks,
                 embedding=embeddings,
                 persist_directory=str(persist_directory),
                 ids=ids
