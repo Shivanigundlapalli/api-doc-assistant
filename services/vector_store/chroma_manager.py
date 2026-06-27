@@ -31,29 +31,33 @@ def get_directory_checksum(directory_path: str) -> str:
 
 @st.cache_resource(show_spinner=False)
 def get_embeddings():
-    api_key = get_google_api_key()
-    if not api_key:
-        logger.error("Missing Google API key for embeddings.")
-        raise PipelineError("VectorDB", "Configuration missing. Please set your GOOGLE_API_KEY.")
-        
-    model = get_embedding_model()
-    embeddings = GoogleGenerativeAIEmbeddings(
-        model=model, 
-        google_api_key=api_key
-    )
+    google_key = get_google_api_key()
+    openai_key = get_config("OPENAI_API_KEY")
     
-    # Using tenacity instead of manual loop for robust backoff
-    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=2, max=20))
-    def _test_embeddings():
-        embeddings.embed_query("test")
-        log_stage("Embeddings", "Initialized")
-
-    try:
-        _test_embeddings()
-        return embeddings
-    except Exception as e:
-        logger.error(f"Embedding initialization failed after retries: {e}")
-        raise PipelineError("VectorDB", f"Failed to connect to embedding model {model}.")
+    # 1. Try Gemini
+    if google_key and google_key != "YOUR_GEMINI_KEY_HERE":
+        try:
+            model = get_embedding_model()
+            embeddings = GoogleGenerativeAIEmbeddings(model=model, google_api_key=google_key)
+            # Test key immediately to catch 400/403 errors
+            embeddings.embed_query("test")
+            log_stage("Embeddings", "Initialized Gemini")
+            return embeddings
+        except Exception as e:
+            logger.warning(f"Gemini embeddings failed (invalid key or unsupported region): {e}. Falling back to OpenAI.")
+            
+    # 2. Try OpenAI
+    if openai_key and openai_key != "YOUR_OPENAI_KEY_HERE":
+        try:
+            from langchain_openai import OpenAIEmbeddings
+            embeddings = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=openai_key)
+            embeddings.embed_query("test")
+            log_stage("Embeddings", "Initialized OpenAI Fallback")
+            return embeddings
+        except Exception as e:
+            logger.warning(f"OpenAI embeddings failed: {e}")
+            
+    raise PipelineError("VectorDB", "Failed to connect to any embedding model. Please check that your API keys are correct.")
 
 @st.cache_resource(show_spinner=False)
 def initialize_vector_store(docs_dir: str):
