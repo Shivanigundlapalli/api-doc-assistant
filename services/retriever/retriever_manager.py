@@ -20,28 +20,6 @@ def get_retriever(_vector_store, k=8):
             }
         )
         
-        # 2. BM25 Keyword Retriever
-        from langchain_community.retrievers import BM25Retriever
-        from langchain_core.documents import Document
-        from langchain.retrievers import EnsembleRetriever
-        
-        docs_data = _vector_store.get()
-        texts = docs_data.get('documents', [])
-        metadatas = docs_data.get('metadatas', [])
-        
-        documents = [Document(page_content=t, metadata=m or {}) for t, m in zip(texts, metadatas)]
-        
-        if documents:
-            bm25_retriever = BM25Retriever.from_documents(documents)
-            bm25_retriever.k = k
-            
-            # 3. Ensemble Retriever (50% Semantic, 50% Keyword)
-            ensemble_retriever = EnsembleRetriever(
-                retrievers=[vector_retriever, bm25_retriever],
-                weights=[0.5, 0.5]
-            )
-            return ensemble_retriever
-            
         return vector_retriever
         
     except Exception as e:
