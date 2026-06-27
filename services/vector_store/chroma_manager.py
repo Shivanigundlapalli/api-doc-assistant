@@ -9,6 +9,7 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from config import get_embedding_model, get_google_api_key, get_chroma_directory
 from services.logging.logger import get_logger, log_stage
 from services.error_handler.handler import PipelineError
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = get_logger("ChromaManager")
 
@@ -41,16 +42,18 @@ def get_embeddings():
         google_api_key=api_key
     )
     
-    max_retries = 2
-    for attempt in range(max_retries):
-        try:
-            embeddings.embed_query("test")
-            log_stage("Embeddings", "Initialized")
-            return embeddings
-        except Exception as e:
-            logger.error(f"Embedding initialization attempt {attempt + 1} failed: {e}")
-            if attempt == max_retries - 1:
-                raise PipelineError("VectorDB", f"Failed to connect to embedding model {model}.")
+    # Using tenacity instead of manual loop for robust backoff
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=2, max=20))
+    def _test_embeddings():
+        embeddings.embed_query("test")
+        log_stage("Embeddings", "Initialized")
+
+    try:
+        _test_embeddings()
+        return embeddings
+    except Exception as e:
+        logger.error(f"Embedding initialization failed after retries: {e}")
+        raise PipelineError("VectorDB", f"Failed to connect to embedding model {model}.")
 
 @st.cache_resource(show_spinner=False)
 def initialize_vector_store(docs_dir: str):
@@ -82,10 +85,9 @@ def initialize_vector_store(docs_dir: str):
             needs_rebuild = True
             
         if needs_rebuild:
-            # Wipe corrupted/outdated directory if exists
-            if persist_directory.exists():
-                shutil.rmtree(persist_directory)
-                persist_directory.mkdir(parents=True, exist_ok=True)
+            # We no longer wipe the directory because it breaks Chroma's in-memory lock
+            # and leads to infinite appending. Instead, we let Chroma handle it,
+            # and we will use deterministic IDs when adding documents.
             return None, True
             
         embeddings = get_embeddings()
@@ -116,18 +118,22 @@ def build_vector_store(chunks: list, docs_dir: str):
         
     persist_directory = _get_persist_directory()
     try:
-        # Strictly wipe the directory before building a new collection
-        if persist_directory.exists():
-            shutil.rmtree(persist_directory)
         persist_directory.mkdir(parents=True, exist_ok=True)
         
         embeddings = get_embeddings()
         
-        vector_store = Chroma.from_documents(
-            documents=chunks,
-            embedding=embeddings,
-            persist_directory=str(persist_directory)
-        )
+        ids = [hashlib.md5(chunk.page_content.encode('utf-8')).hexdigest() for chunk in chunks]
+        
+        @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=2, max=20))
+        def _safe_embed():
+            return Chroma.from_documents(
+                documents=chunks,
+                embedding=embeddings,
+                persist_directory=str(persist_directory),
+                ids=ids
+            )
+            
+        vector_store = _safe_embed()
         
         # Write metadata
         current_checksum = get_directory_checksum(docs_dir)

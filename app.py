@@ -209,91 +209,110 @@ if query:
         
     add_message(st.session_state.current_chat_id, "user", query)
     
-    # 2. Agent Execution via LangGraph
-    from services.agent.graph import create_production_agent_graph
-    import json
-    
-    agent_app = create_production_agent_graph()
+    # Check Cache First to prevent redundant API calls
+    if "query_cache" not in st.session_state:
+        st.session_state.query_cache = {}
+        
+    normalized_query = query.strip().lower()
     
     top_docs = []
     confidence = 0
     category = "General"
     answer_stream = None
     compressed_context = ""
+    is_cached = False
     
-    with st.status("Understanding question...", expanded=True) as status:
-        state = {
-            "question": query,
-            "memory": st.session_state.get("chat_history", []),
-            "retriever": retriever,
-            "is_allowed": True,
-            "optimized_query": "",
-            "category": "",
-            "raw_docs": [],
-            "deduped_docs": [],
-            "top_docs": [],
-            "confidence": 0,
-            "compressed_context": "",
-            "error_message": "",
-            "answer_stream": None
-        }
+    if normalized_query in st.session_state.query_cache:
+        st.toast("Retrieved from Cache! ⚡", icon="⚡")
+        cache_hit = st.session_state.query_cache[normalized_query]
+        top_docs = cache_hit["top_docs"]
+        confidence = cache_hit["confidence"]
         
-        try:
-            for output in agent_app.stream(state):
-                for key, value in output.items():
-                    if key == "analyze_query":
-                        status.update(label="Searching...", state="running")
-                    elif key == "retrieve":
-                        status.update(label="Retrieving...", state="running")
-                    elif key == "rerank":
-                        status.update(label="Ranking...", state="running")
-                    elif key == "LLM":
-                        status.update(label="Generating...", state="running")
-                    
-                    if "error_message" in value and value["error_message"]:
-                        status.update(label="Error", state="error")
-                        err_json = value["error_message"]
-                        try:
-                            err_dict = json.loads(err_json)
-                            err_msg = err_dict.get("reason", "An error occurred.")
-                        except:
-                            err_msg = err_json
-                            
-                        with st.chat_message("assistant", avatar="🤖"):
-                            st.markdown(err_msg)
-                        st.session_state.chat_history.append({"role": "user", "question": query})
-                        st.session_state.chat_history.append({"role": "assistant", "answer": err_msg, "sources": []})
-                        from utils.memory_manager import add_message
-                        add_message(st.session_state.current_chat_id, "assistant", err_msg)
-                        st.stop()
+        def cached_generator():
+            yield cache_hit["answer"]
+            
+        answer_stream = cached_generator()
+        is_cached = True
+    else:
+        # 2. Agent Execution via LangGraph
+        from services.agent.graph import create_production_agent_graph
+        import json
+        
+        agent_app = create_production_agent_graph()
+        
+        with st.status("Understanding question...", expanded=True) as status:
+            state = {
+                "question": query,
+                "memory": st.session_state.get("chat_history", []),
+                "retriever": retriever,
+                "is_allowed": True,
+                "optimized_query": "",
+                "category": "",
+                "raw_docs": [],
+                "deduped_docs": [],
+                "top_docs": [],
+                "confidence": 0,
+                "compressed_context": "",
+                "error_message": "",
+                "answer_stream": None
+            }
+            
+            try:
+                for output in agent_app.stream(state):
+                    for key, value in output.items():
+                        if key == "analyze_query":
+                            status.update(label="Searching...", state="running")
+                        elif key == "retrieve":
+                            status.update(label="Retrieving...", state="running")
+                        elif key == "rerank":
+                            status.update(label="Ranking...", state="running")
+                        elif key == "LLM":
+                            status.update(label="Generating...", state="running")
                         
-                    if "top_docs" in value: top_docs = value["top_docs"]
-                    if "confidence" in value: confidence = value["confidence"]
-                    if "category" in value: category = value["category"]
-                    if "answer_stream" in value: answer_stream = value["answer_stream"]
-                    if "compressed_context" in value: compressed_context = value["compressed_context"]
+                        if "error_message" in value and value["error_message"]:
+                            status.update(label="Error", state="error")
+                            err_json = value["error_message"]
+                            try:
+                                err_dict = json.loads(err_json)
+                                err_msg = err_dict.get("reason", "An error occurred.")
+                            except:
+                                err_msg = err_json
+                                
+                            with st.chat_message("assistant", avatar="🤖"):
+                                st.markdown(err_msg)
+                            st.session_state.chat_history.append({"role": "user", "question": query})
+                            st.session_state.chat_history.append({"role": "assistant", "answer": err_msg, "sources": []})
+                            from utils.memory_manager import add_message
+                            add_message(st.session_state.current_chat_id, "assistant", err_msg)
+                            st.stop()
+                            
+                        if "top_docs" in value: top_docs = value["top_docs"]
+                        if "confidence" in value: confidence = value["confidence"]
+                        if "category" in value: category = value["category"]
+                        if "answer_stream" in value: answer_stream = value["answer_stream"]
+                        if "compressed_context" in value: compressed_context = value["compressed_context"]
             
-            status.update(label="Done", state="complete", expanded=False)
-        except Exception as e:
-            import traceback
-            tb = traceback.format_exc()
-            from services.logging.logger import get_logger
-            get_logger("App.py").error(f"Graph execution failed:\n{tb}")
-            
-            status.update(label="Error", state="error")
-            err_msg = (
-                "We couldn't generate an answer right now.\n\n"
-                "Possible reasons:\n"
-                "• AI provider temporarily unavailable\n"
-                "• API quota exceeded\n"
-                "• Network issue\n\n"
-                "Please try again in a few moments."
-            )
-            with st.chat_message("assistant", avatar="🤖"):
-                st.markdown(err_msg)
-            st.session_state.chat_history.append({"role": "user", "question": query})
-            st.session_state.chat_history.append({"role": "assistant", "answer": err_msg, "sources": []})
-            st.stop()
+                status.update(label="Done", state="complete", expanded=False)
+            except Exception as e:
+                import traceback
+                tb = traceback.format_exc()
+                from services.logging.logger import get_logger
+                get_logger("App.py").error(f"Graph execution failed:\n{tb}")
+                
+                status.update(label="Error", state="error")
+                err_msg = (
+                    "We couldn't generate an answer right now.\n\n"
+                    "Possible reasons:\n"
+                    "• AI provider temporarily unavailable\n"
+                    "• API quota exceeded\n"
+                    "• Network issue\n\n"
+                    "Please try again in a few moments."
+                )
+                with st.chat_message("assistant", avatar="🤖"):
+                    st.markdown(err_msg)
+                st.session_state.chat_history.append({"role": "user", "question": query})
+                st.session_state.chat_history.append({"role": "assistant", "answer": err_msg, "sources": []})
+                st.stop()
 
     # Stream Response into Native UI safely from the network generator
     with st.chat_message("assistant", avatar="🤖"):
@@ -312,6 +331,20 @@ if query:
             elapsed_time = time.time() - start_time
             from services.logging.logger import get_logger
             get_logger("App.py").info(f"Stream completed successfully. Length: {len(answer)}")
+            
+            # Save to cache if not already cached
+            if not is_cached:
+                st.session_state.query_cache[normalized_query] = {
+                    "answer": answer,
+                    "top_docs": top_docs,
+                    "confidence": confidence
+                }
+                
+                # Keep cache small (LRU style, max 50)
+                if len(st.session_state.query_cache) > 50:
+                    oldest_key = list(st.session_state.query_cache.keys())[0]
+                    del st.session_state.query_cache[oldest_key]
+                    
         except Exception as e:
             import traceback
             tb = traceback.format_exc()
