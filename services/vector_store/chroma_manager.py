@@ -6,7 +6,7 @@ from pathlib import Path
 import streamlit as st
 from langchain_chroma import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from config import get_embedding_model, get_google_api_key, get_chroma_directory
+from config import get_embedding_model, get_google_api_key, get_chroma_directory, get_config
 from services.logging.logger import get_logger, log_stage
 from services.error_handler.handler import PipelineError
 from tenacity import retry, stop_after_attempt, wait_exponential
