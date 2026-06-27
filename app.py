@@ -266,8 +266,10 @@ if query:
                             status.update(label="Retrieving...", state="running")
                         elif key == "rerank":
                             status.update(label="Ranking...", state="running")
-                        elif key == "llm":
+                        elif key == "context_validation":
                             status.update(label="Generating...", state="running")
+                        elif key == "llm":
+                            pass # Stream starting
                         
                         if "error_message" in value and value["error_message"]:
                             status.update(label="Error", state="error")
