@@ -266,7 +266,7 @@ if query:
                             status.update(label="Retrieving...", state="running")
                         elif key == "rerank":
                             status.update(label="Ranking...", state="running")
-                        elif key == "LLM":
+                        elif key == "llm":
                             status.update(label="Generating...", state="running")
                         
                         if "error_message" in value and value["error_message"]:
