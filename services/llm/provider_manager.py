@@ -129,9 +129,14 @@ class ProviderManager:
                 except Exception as e:
                     err_str = str(e).lower()
                     
-                    if "429" in err_str or "exhausted" in err_str or "503" in err_str or "500" in err_str or "timeout" in err_str or "rate limit" in err_str:
+                    if "quota" in err_str or "billing" in err_str or "insufficient_quota" in err_str or "exhausted" in err_str:
+                        log_stage("LLM Failover", "Provider Switched", {"failed_provider": model_name, "reason": "API Quota Exceeded"})
+                        st.toast(f"Skipping {model_name}: API quota exceeded.", icon="❌")
+                        break # Move to next model IMMEDIATELY
+                        
+                    elif "429" in err_str or "503" in err_str or "500" in err_str or "timeout" in err_str or "rate limit" in err_str:
                         if delay > 0:
-                            logger.warning(f"[{model_name}] Quota/Rate Limit error. Retrying in {delay}s... ({type(e).__name__})")
+                            logger.warning(f"[{model_name}] Temporary error. Retrying in {delay}s... ({type(e).__name__})")
                             st.toast(f"AI service busy. Retrying automatically in {delay}s...", icon="🔄")
                             time.sleep(delay)
                             continue
