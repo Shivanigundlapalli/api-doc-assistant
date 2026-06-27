@@ -22,7 +22,7 @@ def get_retriever(_vector_store, k=8):
         
         # 2. BM25 Keyword Retriever
         from langchain_community.retrievers import BM25Retriever
-        from langchain.schema import Document
+        from langchain_core.documents import Document
         from langchain.retrievers import EnsembleRetriever
         
         docs_data = _vector_store.get()
