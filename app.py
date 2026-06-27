@@ -144,7 +144,7 @@ try:
 
 except PipelineError as pe:
     logger.error(f"Pipeline Error during init: {pe}")
-    st.error("Documentation indexing failed. Please contact an administrator.")
+    st.error(f"Initialization Failed: {pe.reason}")
     st.stop()
 except Exception as e:
     import traceback
