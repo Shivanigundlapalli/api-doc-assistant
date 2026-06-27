@@ -46,7 +46,7 @@ def get_retriever(_vector_store, k=8):
         
     except Exception as e:
         logger.error(f"Retriever init failed: {e}")
-        raise PipelineError("Retriever", "Failed to configure the documentation retriever.")
+        raise PipelineError("Retriever", f"Failed to configure the documentation retriever. Error: {e}")
 
 def retrieve_chunks(retriever, query: str, top_k: int = 10):
     if not retriever:
