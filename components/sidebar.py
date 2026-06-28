@@ -102,10 +102,119 @@ def render_sidebar():
             
         if st.session_state.show_settings:
             with st.container():
-                st.markdown("<div style='padding: 10px; background-color: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color); margin-top: 8px;'>", unsafe_allow_html=True)
-                st.markdown("**Configuration**")
+                st.markdown('<div class="settings-container-hook"></div>', unsafe_allow_html=True)
+                st.markdown("<h3 style='font-size: 20px; font-weight: 600; color: var(--primary-color); margin-bottom: 20px; margin-top: 0;'>Configuration</h3>", unsafe_allow_html=True)
+                
+                st.markdown("""
+                <style>
+                    /* Custom Scrollbar for Sidebar */
+                    [data-testid="stSidebarUserContent"]::-webkit-scrollbar {
+                        width: 6px !important;
+                        background-color: transparent !important;
+                    }
+                    [data-testid="stSidebarUserContent"]::-webkit-scrollbar-track {
+                        background: #F9FAFB !important;
+                        border-radius: 10px !important;
+                    }
+                    [data-testid="stSidebarUserContent"]::-webkit-scrollbar-thumb {
+                        background: var(--primary-color) !important;
+                        border-radius: 10px !important;
+                    }
+
+                    /* Settings Container Card */
+                    div[data-testid="stVerticalBlock"]:has(.settings-container-hook) {
+                        background-color: #FFFFFF !important;
+                        border-radius: 18px !important;
+                        border: 1px solid var(--border-color) !important;
+                        box-shadow: 0 4px 20px rgba(0,0,0,0.04) !important;
+                        padding: 24px !important;
+                        margin-top: 16px !important;
+                        gap: 16px !important;
+                    }
+
+                    /* General Input Styling inside settings */
+                    div[data-testid="stVerticalBlock"]:has(.settings-container-hook) label {
+                        font-size: 16px !important;
+                        font-weight: 500 !important;
+                        color: var(--text-primary) !important;
+                        padding-bottom: 8px !important;
+                    }
+                    div[data-testid="stVerticalBlock"]:has(.settings-container-hook) .stSelectbox div[data-baseweb="select"] {
+                        height: 48px !important;
+                        border-radius: 12px !important;
+                        border-color: var(--border-color) !important;
+                        background-color: #FFFFFF !important;
+                    }
+                    div[data-testid="stVerticalBlock"]:has(.settings-container-hook) .stSelectbox div[data-baseweb="select"]:hover {
+                        border-color: var(--primary-color) !important;
+                    }
+                    
+                    /* Number Input (Context Window) */
+                    div[data-testid="stVerticalBlock"]:has(.settings-container-hook) .stNumberInput button {
+                        width: 40px !important;
+                        height: 40px !important;
+                        border-radius: 8px !important;
+                        background-color: #F3F4F6 !important;
+                        border: none !important;
+                        transition: all 0.2s ease !important;
+                    }
+                    div[data-testid="stVerticalBlock"]:has(.settings-container-hook) .stNumberInput button:hover {
+                        background-color: #E5E7EB !important;
+                    }
+                    div[data-testid="stVerticalBlock"]:has(.settings-container-hook) .stNumberInput input {
+                        text-align: center !important;
+                        font-size: 15px !important;
+                    }
+
+                    /* Slider (Temperature) */
+                    div[data-testid="stVerticalBlock"]:has(.settings-container-hook) .stSlider [role="slider"] {
+                        width: 20px !important;
+                        height: 20px !important;
+                        background-color: var(--primary-color) !important;
+                        box-shadow: 0 2px 6px rgba(109, 18, 43, 0.3) !important;
+                        border: 2px solid #FFFFFF !important;
+                        transition: transform 0.1s ease !important;
+                    }
+                    div[data-testid="stVerticalBlock"]:has(.settings-container-hook) .stSlider [role="slider"]:hover {
+                        transform: scale(1.15) !important;
+                    }
+                    div[data-testid="stVerticalBlock"]:has(.settings-container-hook) div[data-baseweb="slider"] > div {
+                        height: 4px !important;
+                    }
+                    div[data-testid="stVerticalBlock"]:has(.settings-container-hook) div[data-baseweb="slider"] > div > div:first-child {
+                        background-color: var(--primary-color) !important;
+                    }
+                    div[data-testid="stVerticalBlock"]:has(.settings-container-hook) div[data-baseweb="slider"] > div > div:last-child {
+                        background-color: #E5E7EB !important;
+                    }
+
+                    /* Toggle Switch */
+                    div[data-testid="stVerticalBlock"]:has(.settings-container-hook) .stToggle [data-baseweb="checkbox"] > div {
+                        background-color: #E5E7EB !important;
+                    }
+                    div[data-testid="stVerticalBlock"]:has(.settings-container-hook) .stToggle [data-baseweb="checkbox"] input:checked + div {
+                        background-color: var(--primary-color) !important;
+                    }
+
+                    /* Settings Header Button */
+                    [data-testid="stSidebar"] button:has(p:contains("⚙️ Settings")) {
+                        height: 48px !important;
+                        border: 1px solid var(--primary-color) !important;
+                        background-color: #FFFFFF !important;
+                        border-radius: 12px !important;
+                    }
+                    [data-testid="stSidebar"] button:has(p:contains("⚙️ Settings")) p {
+                        font-weight: 600 !important;
+                        color: var(--primary-color) !important;
+                    }
+                    [data-testid="stSidebar"] button:has(p:contains("⚙️ Settings")):hover {
+                        background-color: #FCF0F2 !important;
+                        transform: translateY(-1px) !important;
+                    }
+                </style>
+                """, unsafe_allow_html=True)
+                
                 st.selectbox("LLM Provider", ["OpenAI (GPT-4o)", "Anthropic (Claude 3.5)", "Local (Llama 3)"], index=0, key="mock_provider")
                 st.slider("Temperature", min_value=0.0, max_value=1.0, value=0.7, step=0.1, key="mock_temp")
                 st.number_input("Context Window (Tokens)", min_value=1000, max_value=128000, value=8000, step=1000, key="mock_ctx")
                 st.toggle("Enable Web Search", value=False, key="mock_web")
-                st.markdown("</div>", unsafe_allow_html=True)
