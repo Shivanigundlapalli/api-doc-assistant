@@ -232,25 +232,50 @@ if query:
     compressed_context = ""
     is_cached = False
     
-    if normalized_query in st.session_state.query_cache:
-        st.toast("Retrieved from Cache! ⚡", icon="⚡")
-        cache_hit = st.session_state.query_cache[normalized_query]
-        top_docs = cache_hit["top_docs"]
-        confidence = cache_hit["confidence"]
-        
-        def cached_generator():
-            yield cache_hit["answer"]
+    # 2. Unified Assistant Response Block
+    with st.chat_message("assistant", avatar="assets/assistant_avatar.svg"):
+        if normalized_query in st.session_state.query_cache:
+            st.toast("Retrieved from Cache! ⚡", icon="⚡")
+            cache_hit = st.session_state.query_cache[normalized_query]
+            top_docs = cache_hit["top_docs"]
+            confidence = cache_hit["confidence"]
             
-        answer_stream = cached_generator()
-        is_cached = True
-    else:
-        # 2. Agent Execution via LangGraph
-        from services.agent.graph import create_production_agent_graph
-        import json
-        
-        agent_app = create_production_agent_graph()
-        
-        with st.status("Understanding question...", expanded=True) as status:
+            def cached_generator():
+                yield cache_hit["answer"]
+                
+            answer_stream = cached_generator()
+            is_cached = True
+        else:
+            # Render stable loading skeleton
+            status_placeholder = st.empty()
+            with status_placeholder.container():
+                st.markdown("""
+                <div class="skeleton-loader" style="min-height: 120px; display: flex; flex-direction: column; justify-content: center; opacity: 0.7; animation: pulse 1.5s infinite ease-in-out;">
+                    <div style="width: 100%; height: 12px; margin-bottom: 16px; background: var(--border-color); border-radius: 4px;"></div>
+                    <div style="width: 85%; height: 12px; margin-bottom: 16px; background: var(--border-color); border-radius: 4px;"></div>
+                    <div style="width: 95%; height: 12px; margin-bottom: 16px; background: var(--border-color); border-radius: 4px;"></div>
+                    <div style="width: 60%; height: 12px; margin-bottom: 0px; background: var(--border-color); border-radius: 4px;"></div>
+                </div>
+                <style>
+                @keyframes pulse {
+                    0% { opacity: 0.4; }
+                    50% { opacity: 0.8; }
+                    100% { opacity: 0.4; }
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
+            # Agent Execution via LangGraph
+            from services.agent.graph import create_production_agent_graph
+            import json
+            
+            agent_app = create_production_agent_graph()
+            
+            class MockStatus:
+                def update(self, *args, **kwargs):
+                    pass
+            status = MockStatus()
+            
             state = {
                 "question": query,
                 "memory": st.session_state.get("chat_history", []),
@@ -286,7 +311,7 @@ if query:
                             
                             if isinstance(value, dict):
                                 if value.get("error_message"):
-                                    status.update(label="Error", state="error")
+                                    status_placeholder.empty()
                                     err_json = value.get("error_message")
                                     try:
                                         err_dict = json.loads(err_json)
@@ -294,8 +319,7 @@ if query:
                                     except:
                                         err_msg = err_json
                                         
-                                    with st.chat_message("assistant", avatar="assets/assistant_avatar.svg"):
-                                        st.markdown(err_msg)
+                                    st.markdown(err_msg)
                                     st.session_state.chat_history.append({"role": "user", "question": query})
                                     st.session_state.chat_history.append({"role": "assistant", "answer": err_msg, "sources": []})
                                     from utils.memory_manager import add_message
@@ -318,7 +342,6 @@ if query:
                                     
                                 if "compressed_context" in value: compressed_context = value.get("compressed_context", "")
             
-                status.update(label="Done", state="complete", expanded=False)
             except Exception as e:
                 import traceback
                 tb = traceback.format_exc()
@@ -326,7 +349,7 @@ if query:
                 logger = get_logger("App.py")
                 logger.error(f"Graph execution failed:\n{tb}")
                 
-                status.update(label="Error", state="error")
+                status_placeholder.empty()
                 err_msg = (
                     "We couldn't generate an answer right now.\n\n"
                     "Possible reasons:\n"
@@ -335,14 +358,15 @@ if query:
                     "• Network issue\n\n"
                     "Please try again in a few moments."
                 )
-                with st.chat_message("assistant", avatar="assets/assistant_avatar.svg"):
-                    st.markdown(err_msg)
+                st.markdown(err_msg)
                 st.session_state.chat_history.append({"role": "user", "question": query})
                 st.session_state.chat_history.append({"role": "assistant", "answer": err_msg, "sources": []})
                 
-    if answer_stream is not None:
-        # Stream Response into Native UI safely from the network generator
-        with st.chat_message("assistant", avatar="assets/assistant_avatar.svg"):
+            # Clear skeleton loader before streaming the actual response
+            status_placeholder.empty()
+                
+        if answer_stream is not None:
+            # Stream Response into Native UI safely from the network generator
             answer = ""
             try:
                 
