@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import time
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -112,28 +113,34 @@ try:
         total_chunks = 0
         
         # 1. Initialize Vector Store
-        vector_store, needs_rebuild = initialize_vector_store(docs_dir)
-        
-        if needs_rebuild or st.session_state.get("rebuild_db", False):
-            if total_docs == 0:
-                raise PipelineError("Startup", "No documentation files found in 'docs/' directory.")
-            logger.info("Rebuilding vector store...")
-            docs = load_documents(docs_dir)
-            chunks = split_documents(docs)
-            vector_store = build_vector_store(chunks, docs_dir)
-            st.session_state.rebuild_db = False
-            total_chunks = len(chunks)
-        else:
-            logger.info("Successfully loaded existing vector database.")
-            if vector_store:
-                try:
-                    total_chunks = vector_store._collection.count()
-                except Exception:
-                    total_chunks = 0
-                    
-        # 2. Initialize Retriever
-        if vector_store:
-            retriever = get_retriever(vector_store)
+        if "vector_store" not in st.session_state or st.session_state.vector_store is None:
+            v_store, needs_rebuild = initialize_vector_store(docs_dir)
+            
+            if needs_rebuild or st.session_state.get("rebuild_db", False):
+                if total_docs == 0:
+                    raise PipelineError("Startup", "No documentation files found in 'docs/' directory.")
+                logger.info("Rebuilding vector store...")
+                docs = load_documents(docs_dir)
+                chunks = split_documents(docs)
+                v_store = build_vector_store(chunks, docs_dir)
+                st.session_state.rebuild_db = False
+                total_chunks = len(chunks)
+            else:
+                logger.info("Successfully loaded existing vector database.")
+                if v_store:
+                    try:
+                        total_chunks = v_store._collection.count()
+                    except Exception:
+                        total_chunks = 0
+            
+            st.session_state.vector_store = v_store
+            
+            # 2. Initialize Retriever
+            if v_store:
+                st.session_state.retriever = get_retriever(v_store)
+                
+        vector_store = st.session_state.vector_store
+        retriever = st.session_state.get("retriever")
             
         # 3. Health Checks
         startup_report, health_status = run_health_checks(vector_store, retriever, total_docs)
@@ -166,8 +173,9 @@ if is_debug_mode():
         st.write(f"**LangSmith Key Loaded:** {langsmith_loaded}")
         
         st.markdown("### Startup Report")
-        for key, value in startup_report.items():
-            st.write(f"**{key}:** {value}")
+        if startup_report and isinstance(startup_report, dict):
+            for key, value in startup_report.items():
+                st.write(f"**{key}:** {value}")
             
         for log in init_logs:
             st.text(log)
@@ -259,47 +267,62 @@ if query:
             
             try:
                 for output in agent_app.stream(state):
-                    for key, value in output.items():
-                        if key == "analyze_query":
-                            status.update(label="Searching...", state="running")
-                        elif key == "retrieve":
-                            status.update(label="Retrieving...", state="running")
-                        elif key == "rerank":
-                            status.update(label="Ranking...", state="running")
-                        elif key == "context_validation":
-                            status.update(label="Generating...", state="running")
-                        elif key == "llm":
-                            pass # Stream starting
-                        
-                        if "error_message" in value and value["error_message"]:
-                            status.update(label="Error", state="error")
-                            err_json = value["error_message"]
-                            try:
-                                err_dict = json.loads(err_json)
-                                err_msg = err_dict.get("reason", "An error occurred.")
-                            except:
-                                err_msg = err_json
-                                
-                            with st.chat_message("assistant", avatar="🤖"):
-                                st.markdown(err_msg)
-                            st.session_state.chat_history.append({"role": "user", "question": query})
-                            st.session_state.chat_history.append({"role": "assistant", "answer": err_msg, "sources": []})
-                            from utils.memory_manager import add_message
-                            add_message(st.session_state.current_chat_id, "assistant", err_msg)
-                            st.stop()
+                    if not output: continue
+                    
+                    if isinstance(output, dict):
+                        for key, value in output.items():
+                            if key == "analyze_query":
+                                status.update(label="Searching...", state="running")
+                            elif key == "retrieve":
+                                status.update(label="Retrieving...", state="running")
+                            elif key == "rerank":
+                                status.update(label="Ranking...", state="running")
+                            elif key == "context_validation":
+                                status.update(label="Generating...", state="running")
+                            elif key == "llm":
+                                pass # Stream starting
                             
-                        if "top_docs" in value: top_docs = value["top_docs"]
-                        if "confidence" in value: confidence = value["confidence"]
-                        if "category" in value: category = value["category"]
-                        if "answer_stream" in value: answer_stream = value["answer_stream"]
-                        if "compressed_context" in value: compressed_context = value["compressed_context"]
+                            if isinstance(value, dict):
+                                if value.get("error_message"):
+                                    status.update(label="Error", state="error")
+                                    err_json = value.get("error_message")
+                                    try:
+                                        err_dict = json.loads(err_json)
+                                        err_msg = err_dict.get("reason", "An error occurred.")
+                                    except:
+                                        err_msg = err_json
+                                        
+                                    with st.chat_message("assistant", avatar="🤖"):
+                                        st.markdown(err_msg)
+                                    st.session_state.chat_history.append({"role": "user", "question": query})
+                                    st.session_state.chat_history.append({"role": "assistant", "answer": err_msg, "sources": []})
+                                    from utils.memory_manager import add_message
+                                    add_message(st.session_state.current_chat_id, "assistant", err_msg)
+                                    st.stop()
+                                    
+                                if "top_docs" in value: top_docs = value.get("top_docs", [])
+                                if "confidence" in value: confidence = value.get("confidence", 0)
+                                if "category" in value: category = value.get("category", "")
+                                
+                                # Handle multiple possible answer fields
+                                if "answer_stream" in value and value.get("answer_stream") is not None:
+                                    answer_stream = value.get("answer_stream")
+                                elif "answer" in value and value.get("answer") is not None:
+                                    answer_stream = value.get("answer")
+                                elif "response" in value and value.get("response") is not None:
+                                    answer_stream = value.get("response")
+                                elif "final_answer" in value and value.get("final_answer") is not None:
+                                    answer_stream = value.get("final_answer")
+                                    
+                                if "compressed_context" in value: compressed_context = value.get("compressed_context", "")
             
                 status.update(label="Done", state="complete", expanded=False)
             except Exception as e:
                 import traceback
                 tb = traceback.format_exc()
                 from services.logging.logger import get_logger
-                get_logger("App.py").error(f"Graph execution failed:\n{tb}")
+                logger = get_logger("App.py")
+                logger.error(f"Graph execution failed:\n{tb}")
                 
                 status.update(label="Error", state="error")
                 err_msg = (
@@ -314,72 +337,79 @@ if query:
                     st.markdown(err_msg)
                 st.session_state.chat_history.append({"role": "user", "question": query})
                 st.session_state.chat_history.append({"role": "assistant", "answer": err_msg, "sources": []})
-                st.stop()
-
-    # Stream Response into Native UI safely from the network generator
-    with st.chat_message("assistant", avatar="🤖"):
-        if not answer_stream:
-            st.error("We couldn't generate an answer because the language model is temporarily unavailable.")
-            st.stop()
-            
-        if confidence >= 80:
-            st.markdown(f"🟢 **Confidence:** High (Based on {len(top_docs)} documentation sections)")
-        elif confidence >= 40:
-            st.markdown(f"🟡 **Confidence:** Medium (Based on {len(top_docs)} documentation sections)")
-            
-        try:
-            start_time = time.time()
-            answer = st.write_stream(answer_stream)
-            elapsed_time = time.time() - start_time
-            from services.logging.logger import get_logger
-            get_logger("App.py").info(f"Stream completed successfully. Length: {len(answer)}")
-            
-            # Save to cache if not already cached
-            if not is_cached:
-                st.session_state.query_cache[normalized_query] = {
-                    "answer": answer,
-                    "top_docs": top_docs,
-                    "confidence": confidence
-                }
                 
-                # Keep cache small (LRU style, max 50)
-                if len(st.session_state.query_cache) > 50:
-                    oldest_key = list(st.session_state.query_cache.keys())[0]
-                    del st.session_state.query_cache[oldest_key]
+    if answer_stream is not None:
+        # Stream Response into Native UI safely from the network generator
+        with st.chat_message("assistant", avatar="🤖"):
+            answer = ""
+            try:
+                
+                if confidence >= 80:
+                    st.markdown(f"🟢 **Confidence:** High (Based on {len(top_docs)} documentation sections)")
+                elif confidence >= 40:
+                    st.markdown(f"🟡 **Confidence:** Medium (Based on {len(top_docs)} documentation sections)")
                     
-        except Exception as e:
-            import traceback
-            tb = traceback.format_exc()
-            from services.logging.logger import get_logger
-            get_logger("App.py").error(f"Streaming UI iteration failed:\n{tb}")
-            answer = "The connection was interrupted while generating the response. Please try again."
-            st.error(answer)
-            st.stop()
+                start_time = time.time()
+                
+                # Check if we got a simple string vs a generator
+                if isinstance(answer_stream, str):
+                    st.markdown(answer_stream)
+                    answer = answer_stream
+                else:
+                    answer = st.write_stream(answer_stream)
+                    
+                elapsed_time = time.time() - start_time
+                from services.logging.logger import get_logger
+                get_logger("App.py").info(f"Stream completed successfully. Length: {len(answer)}")
+                
+                # Save to cache if not already cached
+                if not is_cached and answer:
+                    st.session_state.query_cache[normalized_query] = {
+                        "answer": answer,
+                        "top_docs": top_docs,
+                        "confidence": confidence
+                    }
+                    
+                    # Keep cache small (LRU style, max 50)
+                    if len(st.session_state.query_cache) > 50:
+                        oldest_key = list(st.session_state.query_cache.keys())[0]
+                        del st.session_state.query_cache[oldest_key]
+                        
+            except Exception as e:
+                import traceback
+                tb = traceback.format_exc()
+                from services.logging.logger import get_logger
+                get_logger("App.py").error(f"Streaming UI iteration failed:\n{tb}")
+                if not answer:
+                    answer = "The connection was interrupted while generating the response. Please try again."
+                    st.error(answer)
+                else:
+                    st.warning("The connection was interrupted, but here is the partial response generated so far:")
+                
+            if answer and len(answer.strip()) < 30 and not "AI service disruption" in answer:
+                err_str = f"The generated answer was too short ({len(answer)} chars): '{answer}'"
+                from services.logging.logger import get_logger
+                get_logger("App.py").error(err_str)
+                if not top_docs:
+                    st.error(err_str)
+                
+            if top_docs:
+                render_source_chips(top_docs, confidence=confidence)
+                
+            # Add metadata footer
+            st.markdown(
+                f"<div style='font-size: 13px; color: var(--text-muted); margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color);'>"
+                f"Generated in {elapsed_time:.1f} s &nbsp;•&nbsp; "
+                f"Model: Gemini 2.5 Flash &nbsp;•&nbsp; "
+                f"Retrieved {len(top_docs)} chunks &nbsp;•&nbsp; "
+                f"Grounded in documentation</div>",
+                unsafe_allow_html=True
+            )
+                
+            st.session_state.chat_history.append({"role": "user", "question": query})
+            st.session_state.chat_history.append({"role": "assistant", "answer": answer, "sources": top_docs, "confidence": confidence})
             
-        if len(answer.strip()) < 30:
-            err_str = f"The generated answer was too short ({len(answer)} chars): '{answer}'"
-            from services.logging.logger import get_logger
-            get_logger("App.py").error(err_str)
-            st.error(err_str)
-            st.stop()
-            
-        if top_docs:
-            render_source_chips(top_docs, confidence=confidence)
-            
-        # Add metadata footer
-        st.markdown(
-            f"<div style='font-size: 13px; color: #64748B; margin-top: 24px; padding-top: 16px; border-top: 1px solid #E2E8F0;'>"
-            f"Generated in {elapsed_time:.1f} s &nbsp;•&nbsp; "
-            f"Model: Gemini 2.5 Flash &nbsp;•&nbsp; "
-            f"Retrieved {len(top_docs)} chunks &nbsp;•&nbsp; "
-            f"Grounded in documentation</div>",
-            unsafe_allow_html=True
-        )
-            
-        st.session_state.chat_history.append({"role": "user", "question": query})
-        st.session_state.chat_history.append({"role": "assistant", "answer": answer, "sources": top_docs, "confidence": confidence})
-        
-        source_dicts = [{"content": d.page_content, "metadata": d.metadata} for d in top_docs]
-        from utils.memory_manager import add_message, update_chat_category
-        add_message(st.session_state.current_chat_id, "assistant", answer, sources=source_dicts)
-        update_chat_category(st.session_state.current_chat_id, category)
+            source_dicts = [{"content": d.page_content, "metadata": d.metadata} for d in top_docs]
+            from utils.memory_manager import add_message, update_chat_category
+            add_message(st.session_state.current_chat_id, "assistant", answer, sources=source_dicts)
+            update_chat_category(st.session_state.current_chat_id, category)

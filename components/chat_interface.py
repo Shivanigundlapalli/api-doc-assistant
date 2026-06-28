@@ -8,7 +8,7 @@ def render_source_chips(sources: list, confidence: int = 0):
     if not sources:
         return
         
-    st.markdown("<div style='font-size: 14px; font-weight: 600; color: #4B5563; margin-top: 32px; margin-bottom: 16px; letter-spacing: 0.05em; text-transform: uppercase;'>Retrieved From</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size: 13px; font-weight: 600; color: var(--text-muted); margin-top: 24px; margin-bottom: 12px; letter-spacing: 0.05em; text-transform: uppercase;'>Sources</div>", unsafe_allow_html=True)
     
     # Deduplicate sources based on filename
     unique_sources = {}
@@ -31,58 +31,58 @@ def render_source_chips(sources: list, confidence: int = 0):
             unique_sources[name]["chunks"].append(content)
     
     # Render inline popovers using columns so they appear side-by-side
-    cols = st.columns(len(unique_sources) + 1)
-    for idx, (name, data) in enumerate(unique_sources.items()):
+    if unique_sources and isinstance(unique_sources, dict):
+        cols = st.columns(len(unique_sources) + 1)
+        for idx, (name, data) in enumerate(unique_sources.items()):
         
-        # Heuristics for a clean title and section
-        title = name.replace(".md", "").replace("-", " ").replace("_", " ").title()
-        
-        # Determine Confidence String
-        conf_str = "High" if confidence >= 80 else ("Medium" if confidence >= 40 else "Low")
-        
-        with cols[idx]:
-            with st.popover(f"📄 {name}"):
-                st.markdown(f"**Retrieved From**")
-                st.markdown(f"{name}")
-                st.markdown(f"Section: {title}")
-                st.markdown(f"Confidence: {conf_str}")
-                st.divider()
-                for chunk in data["chunks"]:
-                    st.markdown(
-                        f"<div style='background-color: #FAF8F5; padding: 12px; border-left: 3px solid #8B1E1E; border-radius: 4px; font-size: 14px; color: #475569; margin-bottom: 12px;'>{chunk}</div>", 
-                        unsafe_allow_html=True
-                    )
+            # Heuristics for a clean title and section
+            title = name.replace(".md", "").replace("-", " ").replace("_", " ").title()
+            
+            # Determine Confidence String
+            conf_str = "High" if confidence >= 80 else ("Medium" if confidence >= 40 else "Low")
+            
+            with cols[idx]:
+                with st.popover(f"📄 {name}"):
+                    st.markdown(f"**Retrieved From**")
+                    st.markdown(f"{name}")
+                    st.markdown(f"Section: {title}")
+                    st.markdown(f"Confidence: {conf_str}")
+                    st.divider()
+                    for chunk in data["chunks"]:
+                        st.markdown(
+                            f"<div style='background-color: var(--bg-secondary); padding: 16px; border-left: 3px solid var(--primary-color); border-radius: 8px; font-size: 14px; color: var(--text-primary); margin-bottom: 12px;'>{chunk}</div>", 
+                            unsafe_allow_html=True
+                        )
 
     # Action buttons below
     st.markdown(f"""
         <style>
             .enterprise-action-btn {{
                 font-size: 14px; 
-                padding: 8px 16px; 
+                padding: 6px 14px; 
                 border-radius: 20px; 
-                border: 1px solid #E5E7EB; 
-                background: #FFFFFF; 
-                color: #4B5563;
+                border: 1px solid var(--border-color); 
+                background: var(--bg-card); 
+                color: var(--text-secondary);
                 cursor: pointer;
                 display: inline-flex;
                 align-items: center;
                 gap: 6px;
                 font-weight: 500;
-                transition: all 0.2s ease;
+                transition: all var(--transition-hover);
                 box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
             }}
             .enterprise-action-btn:hover {{
-                background: #F9FAFB;
-                border-color: #D1D5DB;
-                color: #111827;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                background: var(--bg-secondary);
+                border-color: var(--text-disabled);
+                color: var(--text-primary);
                 transform: translateY(-1px);
             }}
             .enterprise-action-btn:active {{
                 transform: translateY(0);
             }}
         </style>
-        <div class="action-buttons-wrapper" style="margin-top: 32px; display: flex; gap: 12px; border-top: 1px solid #E5E7EB; padding-top: 24px;">
+        <div class="action-buttons-wrapper animated-fade" style="margin-top: 24px; display: flex; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--border-color); padding-top: 16px;">
             <button class="enterprise-action-btn" onclick="navigator.clipboard.writeText('Response copied!')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                 Copy
@@ -111,3 +111,4 @@ def render_source_chips(sources: list, confidence: int = 0):
     """, unsafe_allow_html=True)
     
     return sources
+
