@@ -183,18 +183,36 @@ def render_source_chips(sources: list, confidence: int = 0):
                         btn.addEventListener('click', function(e) {
                             e.preventDefault();
                             
-                            const origHTML = this.innerHTML;
                             const type = this.innerText.toLowerCase();
                             const chatMsg = this.closest('.stChatMessage');
                             let msgText = chatMsg ? chatMsg.querySelector('[data-testid="stMarkdownContainer"]').innerText : "";
                             
                             const showMsg = (msg) => {
-                                this.innerHTML = `<span style="font-size:12px; font-weight:500; display:flex; align-items:center; justify-content:center; width:100%; height:100%;">${msg}</span>`;
-                                setTimeout(() => this.innerHTML = origHTML, 2000);
+                                const span = this.querySelector('span');
+                                if (span) {
+                                    const origText = span.innerText;
+                                    span.innerText = msg;
+                                    setTimeout(() => span.innerText = origText, 2000);
+                                }
                             };
                             
                             if (type.includes('copy')) {
-                                navigator.clipboard.writeText(msgText).then(() => showMsg('✅ Copied'));
+                                // Fallback copy for iframe security constraints
+                                const textArea = parent.createElement('textarea');
+                                textArea.value = msgText;
+                                textArea.style.position = 'fixed';
+                                textArea.style.opacity = '0';
+                                parent.body.appendChild(textArea);
+                                textArea.focus();
+                                textArea.select();
+                                try {
+                                    parent.execCommand('copy');
+                                    showMsg('✅ Copied');
+                                } catch (err) {
+                                    console.error('Copy failed', err);
+                                    showMsg('❌ Failed');
+                                }
+                                parent.body.removeChild(textArea);
                             } else if (type.includes('not helpful')) {
                                 showMsg('Will improve!');
                             } else if (type.includes('helpful')) {
