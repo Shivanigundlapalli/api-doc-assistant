@@ -193,6 +193,18 @@ render_sidebar()
 if not st.session_state.chat_history:
     render_hero()
 
+if st.session_state.pending_query:
+    query = st.session_state.pending_query
+    st.session_state.pending_query = None
+else:
+    st.markdown('<span id="chat-btn-anchor"></span>', unsafe_allow_html=True)
+    query = st.chat_input("Ask anything about your API documentation...")
+
+if query:
+    # Immediately persist the user message to prevent disappearance on rerender
+    st.session_state.chat_history.append({"role": "user", "question": query})
+    add_message(st.session_state.current_chat_id, "user", query)
+
 # Chat History
 from components.chat_interface import render_source_chips
 
@@ -204,20 +216,7 @@ for i, msg in enumerate(st.session_state.get("chat_history", [])):
         if msg.get("role") == "assistant" and msg.get("sources"):
             render_source_chips(msg.get("sources"), confidence=msg.get("confidence", 0))
 
-if st.session_state.pending_query:
-    query = st.session_state.pending_query
-    st.session_state.pending_query = None
-else:
-    st.markdown('<span id="chat-btn-anchor"></span>', unsafe_allow_html=True)
-
-    query = st.chat_input("Ask anything about your API documentation...")
-
 if query:
-    # 1. Render User Message
-    with st.chat_message("user", avatar="assets/user_avatar.svg"):
-        st.markdown(query)
-        
-    add_message(st.session_state.current_chat_id, "user", query)
     
     # Check Cache First to prevent redundant API calls
     if "query_cache" not in st.session_state:
@@ -320,7 +319,6 @@ if query:
                                         err_msg = err_json
                                         
                                     st.markdown(err_msg)
-                                    st.session_state.chat_history.append({"role": "user", "question": query})
                                     st.session_state.chat_history.append({"role": "assistant", "answer": err_msg, "sources": []})
                                     from utils.memory_manager import add_message
                                     add_message(st.session_state.current_chat_id, "assistant", err_msg)
@@ -359,7 +357,6 @@ if query:
                     "Please try again in a few moments."
                 )
                 st.markdown(err_msg)
-                st.session_state.chat_history.append({"role": "user", "question": query})
                 st.session_state.chat_history.append({"role": "assistant", "answer": err_msg, "sources": []})
                 
             # Clear skeleton loader before streaming the actual response
@@ -433,7 +430,6 @@ if query:
                 unsafe_allow_html=True
             )
                 
-            st.session_state.chat_history.append({"role": "user", "question": query})
             st.session_state.chat_history.append({"role": "assistant", "answer": answer, "sources": top_docs, "confidence": confidence})
             
             source_dicts = [{"content": d.page_content, "metadata": d.metadata} for d in top_docs]
