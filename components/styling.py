@@ -186,20 +186,60 @@ header { background: transparent !important; }
     margin: 0 auto 32px auto !important;
 }
 
-/* Hide avatars completely to prevent layout shifts */
+/* Avatar Container Layout */
 [data-testid="stChatMessageAvatar"] {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    margin-right: 16px !important;
+}
+
+[data-testid="chatAvatarIcon-user"], [data-testid="chatAvatarIcon-assistant"] {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Hide default streamlit SVGs */
+[data-testid="chatAvatarIcon-user"] svg, [data-testid="chatAvatarIcon-assistant"] svg {
     display: none !important;
 }
 
-/* Force message content container to use full width and remove left margin */
+/* User Avatar Styling */
+[data-testid="chatAvatarIcon-user"] {
+    background-color: #FDEBED !important;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%236D122B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>');
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+/* Assistant Avatar Styling */
+[data-testid="chatAvatarIcon-assistant"] {
+    background-color: #FFFFFF !important;
+    border: 1px solid #E8DADA !important;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%236D122B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/><path d="M12 8V4H8"/></svg>');
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+/* Force message content container to use full width */
 div[data-testid="stChatMessageContent"] {
     width: 100% !important;
-    margin-left: 0 !important;
-    padding-left: 0 !important;
+}
+
+/* Align user row vertically */
+.stChatMessage[data-testid="stChatMessage"]:nth-child(odd) {
+    align-items: center !important;
 }
 
 /* Assistant Message Bubble (White Card) */
-.stChatMessage[data-testid="stChatMessage"]:nth-child(even) {
+.stChatMessage[data-testid="stChatMessage"]:nth-child(even) div[data-testid="stChatMessageContent"] {
     background-color: var(--bg-card) !important;
     border-radius: 18px !important;
     border: 1px solid var(--border-color) !important;
@@ -207,21 +247,18 @@ div[data-testid="stChatMessageContent"] {
     padding: 28px !important;
     transition: transform var(--transition-hover), box-shadow var(--transition-hover) !important;
 }
-.stChatMessage[data-testid="stChatMessage"]:nth-child(even):hover {
+.stChatMessage[data-testid="stChatMessage"]:nth-child(even) div[data-testid="stChatMessageContent"]:hover {
     transform: translateY(-2px);
     box-shadow: 0 12px 40px rgba(0,0,0,.08) !important;
 }
 
 /* User Message Bubble */
-.stChatMessage[data-testid="stChatMessage"]:nth-child(odd) {
+.stChatMessage[data-testid="stChatMessage"]:nth-child(odd) div[data-testid="stChatMessageContent"] {
     background-color: var(--primary-light) !important;
     border: none !important;
     box-shadow: none !important;
     border-radius: 20px !important;
     padding: 16px 24px !important;
-    margin-bottom: 32px !important;
-    max-width: 100% !important;
-    margin-left: 0 !important;
 }
 
 .stChatMessage[data-testid="stChatMessage"]:nth-child(odd) p {
