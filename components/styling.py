@@ -180,8 +180,22 @@ header { background: transparent !important; }
 /* Chat Messages */
 .stChatMessage {
     padding: 0 !important;
-    margin-bottom: 32px !important;
     background: transparent !important;
+    width: 100% !important;
+    max-width: 1100px !important;
+    margin: 0 auto 32px auto !important;
+}
+
+/* Hide avatars completely to prevent layout shifts */
+[data-testid="stChatMessageAvatar"] {
+    display: none !important;
+}
+
+/* Force message content container to use full width and remove left margin */
+div[data-testid="stChatMessageContent"] {
+    width: 100% !important;
+    margin-left: 0 !important;
+    padding-left: 0 !important;
 }
 
 /* Assistant Message Bubble (White Card) */
@@ -203,11 +217,11 @@ header { background: transparent !important; }
     background-color: var(--primary-light) !important;
     border: none !important;
     box-shadow: none !important;
-    border-radius: 20px 20px 0 20px !important;
+    border-radius: 20px !important;
     padding: 16px 24px !important;
     margin-bottom: 32px !important;
-    max-width: 80%;
-    margin-left: auto !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
 }
 
 .stChatMessage[data-testid="stChatMessage"]:nth-child(odd) p {
@@ -307,13 +321,7 @@ div[data-testid="stChatInput"] textarea::placeholder {
     color: white !important;
 }
 
-/* Avatars */
-[data-testid="chatAvatarIcon-user"] {
-    display: none !important;
-}
-[data-testid="chatAvatarIcon-assistant"] {
-    display: none !important;
-}
+/* Avatars (Hidden in earlier rule) */
 
 /* Animations */
 .animated-fade {
