@@ -32,23 +32,27 @@ def safe_node(stage_name: str):
     def decorator(func):
         def wrapper(state: AgentState):
             try:
-                logger.info(f"[{stage_name}] Node entered.")
-                logger.debug(f"[{stage_name}] Input State: {list(state.keys())}")
+                logger.info(f"[{stage_name}] START")
+                logger.debug(f"[{stage_name}] Input State: {list(state.keys()) if state and isinstance(state, dict) else 'None'}")
                 
                 start_time = time.time()
                 result = func(state)
                 elapsed = time.time() - start_time
                 
-                logger.info(f"[{stage_name}] Node exited in {elapsed:.2f}s.")
-                logger.debug(f"[{stage_name}] Output: {list(result.keys()) if result else None}")
+                if result is None:
+                    logger.warning(f"[{stage_name}] FAILURE - Node returned None. Skipping.")
+                    return {}
+                    
+                logger.info(f"[{stage_name}] SUCCESS in {elapsed:.2f}s.")
+                logger.debug(f"[{stage_name}] Output: {list(result.keys()) if isinstance(result, dict) else 'Unknown'}")
                 
-                if "error_message" not in result:
+                if isinstance(result, dict) and not result.get("error_message"):
                     log_stage(stage_name, "Success", {"latency": f"{elapsed:.2f}s"})
                 return result
             except Exception as e:
                 import traceback
                 tb = traceback.format_exc()
-                logger.error(f"[{stage_name}] EXCEPTION OCCURRED:\n{tb}")
+                logger.error(f"[{stage_name}] FAILURE - EXCEPTION OCCURRED:\n{tb}")
                 
                 err_json = handle_exception(stage_name, e)
                 return {"error_message": err_json}
@@ -57,34 +61,39 @@ def safe_node(stage_name: str):
 
 @safe_node("Guardrails")
 def node_guardrails(state: AgentState):
-    is_allowed = check_guardrails(state["question"])
+    if not isinstance(state, dict): return {}
+    question = state.get("question", "")
+    is_allowed = check_guardrails(question)
     if not is_allowed:
         raise PipelineError("Guardrails", "I can answer only questions related to the uploaded documentation.")
     return {"is_allowed": True}
 
 @safe_node("Query Rewrite")
 def node_analyze_query(state: AgentState):
-    analysis = analyze_query(state["question"], state["memory"])
+    if not isinstance(state, dict): return {}
+    analysis = analyze_query(state.get("question", ""), state.get("memory", []))
     return {
-        "optimized_query": analysis["rewritten_query"],
-        "category": analysis["category"]
+        "optimized_query": analysis.get("rewritten_query", ""),
+        "category": analysis.get("category", "")
     }
 
 @safe_node("Retriever")
 def node_retrieve(state: AgentState):
-    docs = retrieve_chunks(state.get("retriever"), state["optimized_query"], top_k=8)
-    log_stage("Retriever", "Documents retrieved", {"count": len(docs)})
+    if not isinstance(state, dict): return {}
+    docs = retrieve_chunks(state.get("retriever"), state.get("optimized_query", ""), top_k=8)
+    log_stage("Retriever", "Documents retrieved", {"count": len(docs) if docs else 0})
     return {"raw_docs": docs}
 
 @safe_node("Re-ranker")
 def node_rerank(state: AgentState):
+    if not isinstance(state, dict): return {}
     deduped = deduplicate_docs(state.get("raw_docs", []))
-    rerank_result = rerank_and_score_confidence(state["optimized_query"], deduped, top_k=4)
-    log_stage("Re-ranker", "Top chunks selected", {"count": len(rerank_result["top_chunks"]), "confidence": rerank_result["confidence"]})
+    rerank_result = rerank_and_score_confidence(state.get("optimized_query", ""), deduped, top_k=4)
+    log_stage("Re-ranker", "Top chunks selected", {"count": len(rerank_result.get("top_chunks", [])), "confidence": rerank_result.get("confidence", 0)})
     return {
         "deduped_docs": deduped,
-        "top_docs": rerank_result["top_chunks"],
-        "confidence": rerank_result["confidence"]
+        "top_docs": rerank_result.get("top_chunks", []),
+        "confidence": rerank_result.get("confidence", 0)
     }
 
 @safe_node("Context Validation")
@@ -105,7 +114,7 @@ def node_context_validation(state: AgentState):
         searched_list = "\n".join([f"• {name}" for name in unique_names]) if unique_names else "• No documents indexed"
         
         err_msg = (
-            f"I couldn't find information about \"{state['question']}\" in the uploaded documentation.\n\n"
+            f"I couldn't find information about \"{state.get('question', '')}\" in the uploaded documentation.\n\n"
             f"I searched:\n{searched_list}\n\n"
             "If you upload documentation containing this topic, I'll answer based on those documents."
         )
@@ -114,7 +123,7 @@ def node_context_validation(state: AgentState):
     context = compress_context(top_docs)
     if len(context) < 50:
         err_msg = (
-            f"I couldn't find information about \"{state['question']}\" in the uploaded documentation.\n\n"
+            f"I couldn't find information about \"{state.get('question', '')}\" in the uploaded documentation.\n\n"
             "If you upload documentation containing this topic, I'll answer based on those documents."
         )
         raise PipelineError("Context Validation", err_msg)
@@ -123,27 +132,33 @@ def node_context_validation(state: AgentState):
 
 @safe_node("LLM")
 def node_llm(state: AgentState):
+    if not isinstance(state, dict): return {}
     from services.llm.provider_manager import ProviderManager
     
-    prompt = build_qa_prompt(state["optimized_query"], state["compressed_context"], state["memory"])
+    optimized_query = state.get("optimized_query", "")
+    compressed_context = state.get("compressed_context", "")
+    memory = state.get("memory", [])
+    
+    prompt = build_qa_prompt(optimized_query, compressed_context, memory)
     pm = ProviderManager()
     
     inputs = {
         "chat_history": "", 
-        "context": state["compressed_context"],
-        "question": state["optimized_query"]
+        "context": compressed_context,
+        "question": optimized_query
     }
     
     # Debug logging
     formatted_prompt = prompt.format(**inputs)
     logger.debug(f"[LLM Debug] Formatted prompt length: {len(formatted_prompt)} chars")
-    logger.debug(f"[LLM Debug] Context length: {len(state['compressed_context'])} chars")
+    logger.debug(f"[LLM Debug] Context length: {len(compressed_context)} chars")
     
     answer_stream, final_model = pm.execute_with_failover(prompt, StrOutputParser(), inputs)
     return {"answer_stream": answer_stream, "final_model": final_model}
 
 @safe_node("Response Validator")
 def node_response_validator(state: AgentState):
+    if not isinstance(state, dict): return {}
     if not state.get("answer_stream"):
         raise PipelineError("Response Validator", "We couldn't generate a valid answer because the language model response was empty.")
     return {}
@@ -162,7 +177,7 @@ def create_production_agent_graph():
     workflow.set_entry_point("guardrails")
 
     def check_error_edge(state: AgentState):
-        if state.get("error_message"):
+        if isinstance(state, dict) and state.get("error_message"):
             return "end"
         return "continue"
 

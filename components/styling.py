@@ -235,7 +235,7 @@ div[data-testid="stChatMessageContent"] {
     border-radius: 18px !important;
     border: 1px solid var(--border-color) !important;
     box-shadow: var(--shadow-card) !important;
-    padding: 28px !important;
+    padding: 24px !important;
     transition: transform var(--transition-hover), box-shadow var(--transition-hover) !important;
 }
 .stChatMessage[data-testid="stChatMessage"]:nth-child(even):hover {

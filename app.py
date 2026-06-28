@@ -399,11 +399,12 @@ if query:
                 render_source_chips(top_docs, confidence=confidence)
                 
             # Add metadata footer
+            # Add metadata footer
             st.markdown(
-                f"<div style='font-size: 13px; color: var(--text-muted); margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color);'>"
-                f"Generated in {elapsed_time:.1f} s &nbsp;•&nbsp; "
-                f"Model: Gemini 2.5 Flash &nbsp;•&nbsp; "
-                f"Retrieved {len(top_docs)} chunks &nbsp;•&nbsp; "
+                f"<div style='font-size: 13px; color: var(--text-muted); margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border-color); display: flex; align-items: center; justify-content: flex-start; flex-wrap: nowrap; white-space: nowrap; overflow: hidden;'>"
+                f"Generated in {elapsed_time:.1f} s <span style='margin: 0 8px; opacity: 0.5;'>•</span> "
+                f"Model: Gemini 2.5 Flash <span style='margin: 0 8px; opacity: 0.5;'>•</span> "
+                f"Retrieved {len(top_docs)} chunks <span style='margin: 0 8px; opacity: 0.5;'>•</span> "
                 f"Grounded in documentation</div>",
                 unsafe_allow_html=True
             )

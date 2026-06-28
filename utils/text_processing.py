@@ -21,7 +21,8 @@ def split_documents(documents, chunk_size=1000, chunk_overlap=200):
             source = chunk.metadata.get("source", "unknown")
             chunk.metadata["chunk_id"] = f"{source}_chunk_{i}"
             # Ensure only string/int/float types for ChromaDB compatibility
-            chunk.metadata = {k: str(v) for k, v in chunk.metadata.items()}
+            if chunk.metadata and isinstance(chunk.metadata, dict):
+                chunk.metadata = {k: str(v) for k, v in chunk.metadata.items()}
             
         return chunks
     except Exception as e:

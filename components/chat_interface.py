@@ -57,32 +57,67 @@ def render_source_chips(sources: list, confidence: int = 0):
     # Action buttons below
     st.markdown(f"""
         <style>
+            /* Source Card Overrides */
+            div[data-testid="stPopover"] > button {{
+                min-width: 170px !important;
+                max-width: 220px !important;
+                height: 48px !important;
+                padding: 0 16px !important;
+                border-radius: 12px !important;
+                background-color: var(--bg-card) !important;
+                border: 1px solid var(--border-color) !important;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+                transition: all 0.2s ease !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }}
+            div[data-testid="stPopover"] > button p {{
+                font-size: 13px !important;
+                font-weight: 500 !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                margin: 0 !important;
+                color: var(--text-primary) !important;
+            }}
+            div[data-testid="stPopover"] > button:hover {{
+                border-color: var(--primary-color) !important;
+                background-color: var(--bg-secondary) !important;
+                transform: translateY(-1px) !important;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
+            }}
+
+            /* Action Buttons Overrides */
             .enterprise-action-btn {{
-                font-size: 14px; 
-                padding: 6px 14px; 
-                border-radius: 20px; 
+                font-size: 13px; 
+                height: 40px;
+                padding: 0 16px; 
+                border-radius: 8px; 
                 border: 1px solid var(--border-color); 
-                background: var(--bg-card); 
+                background: #FFFFFF; 
                 color: var(--text-secondary);
                 cursor: pointer;
                 display: inline-flex;
                 align-items: center;
-                gap: 6px;
+                justify-content: center;
+                gap: 8px;
                 font-weight: 500;
-                transition: all var(--transition-hover);
-                box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+                transition: all 0.2s ease;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
             }}
             .enterprise-action-btn:hover {{
-                background: var(--bg-secondary);
-                border-color: var(--text-disabled);
+                background: #F9FAFB;
+                border-color: #D1D5DB;
                 color: var(--text-primary);
                 transform: translateY(-1px);
+                box-shadow: 0 4px 6px rgba(0,0,0,0.04);
             }}
             .enterprise-action-btn:active {{
                 transform: translateY(0);
             }}
         </style>
-        <div class="action-buttons-wrapper animated-fade" style="margin-top: 24px; display: flex; gap: 6px; flex-wrap: wrap; border-top: 1px solid var(--border-color); padding-top: 16px;">
+        <div class="action-buttons-wrapper animated-fade" style="margin-top: 32px; display: flex; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--border-color); padding-top: 24px;">
             <button class="enterprise-action-btn" onclick="navigator.clipboard.writeText('Response copied!')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                 Copy

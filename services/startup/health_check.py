@@ -11,8 +11,9 @@ def run_health_checks(vector_store, retriever, total_docs):
     
     # We log the specific provider format as requested
     logger.info("Available Providers")
-    for provider, status in provider_health.items():
-        logger.info(f"{provider} {status}")
+    if provider_health and isinstance(provider_health, dict):
+        for provider, status in provider_health.items():
+            logger.info(f"{provider} {status}")
 
     report = {
         "Embedding Model": "OK" if vector_store else "Failed",
@@ -24,8 +25,9 @@ def run_health_checks(vector_store, retriever, total_docs):
     }
     
     # Add Providers to the report for the UI
-    for provider, status in provider_health.items():
-        report[f"Provider {provider}"] = status
+    if provider_health and isinstance(provider_health, dict):
+        for provider, status in provider_health.items():
+            report[f"Provider {provider}"] = status
         
     status = "System Healthy"
     if "Failed" in report.values() or "Read-Only" in report.values():
