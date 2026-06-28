@@ -92,11 +92,20 @@ def render_sidebar():
                             st.rerun()
 
         # Bottom Navigation (Settings)
-        st.markdown("""
-            <div style='margin-top: 40px; display: flex; flex-direction: column; gap: 8px;'>
-                <div style='display: flex; align-items: center; gap: 8px; color: var(--text-primary); font-size: 14px; font-weight: 500; cursor: pointer; padding: 8px; border-radius: 8px; transition: background 0.2s;' onmouseover="this.style.background='#F0E6E6'" onmouseout="this.style.background='transparent'">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                    Settings
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 40px;'></div>", unsafe_allow_html=True)
+        
+        if "show_settings" not in st.session_state:
+            st.session_state.show_settings = False
+            
+        if st.button("⚙️ Settings", use_container_width=True, key="settings_btn"):
+            st.session_state.show_settings = not st.session_state.show_settings
+            
+        if st.session_state.show_settings:
+            with st.container():
+                st.markdown("<div style='padding: 10px; background-color: var(--bg-card); border-radius: 8px; border: 1px solid var(--border-color); margin-top: 8px;'>", unsafe_allow_html=True)
+                st.markdown("**Configuration**")
+                st.selectbox("LLM Provider", ["OpenAI (GPT-4o)", "Anthropic (Claude 3.5)", "Local (Llama 3)"], index=0, key="mock_provider")
+                st.slider("Temperature", min_value=0.0, max_value=1.0, value=0.7, step=0.1, key="mock_temp")
+                st.number_input("Context Window (Tokens)", min_value=1000, max_value=128000, value=8000, step=1000, key="mock_ctx")
+                st.toggle("Enable Web Search", value=False, key="mock_web")
+                st.markdown("</div>", unsafe_allow_html=True)
