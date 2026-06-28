@@ -59,10 +59,9 @@ def render_source_chips(sources: list, confidence: int = 0):
         <style>
             /* Source Card Overrides */
             div[data-testid="stPopover"] > button {{
-                min-width: 170px !important;
-                max-width: 220px !important;
+                width: 100% !important;
                 height: 48px !important;
-                padding: 0 16px !important;
+                padding: 0 12px !important;
                 border-radius: 12px !important;
                 background-color: var(--bg-card) !important;
                 border: 1px solid var(--border-color) !important;
@@ -70,7 +69,12 @@ def render_source_chips(sources: list, confidence: int = 0):
                 transition: all 0.2s ease !important;
                 display: flex !important;
                 align-items: center !important;
-                justify-content: center !important;
+                justify-content: flex-start !important;
+                overflow: hidden !important;
+            }}
+            div[data-testid="stPopover"] > button div[data-testid="stMarkdownContainer"] {{
+                width: 100% !important;
+                overflow: hidden !important;
             }}
             div[data-testid="stPopover"] > button p {{
                 font-size: 13px !important;
@@ -80,6 +84,8 @@ def render_source_chips(sources: list, confidence: int = 0):
                 text-overflow: ellipsis !important;
                 margin: 0 !important;
                 color: var(--text-primary) !important;
+                text-align: left !important;
+                width: 100% !important;
             }}
             div[data-testid="stPopover"] > button:hover {{
                 border-color: var(--primary-color) !important;
@@ -118,27 +124,27 @@ def render_source_chips(sources: list, confidence: int = 0):
             }}
         </style>
         <div class="action-buttons-wrapper animated-fade" style="margin-top: 32px; display: flex; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--border-color); padding-top: 24px;">
-            <button class="enterprise-action-btn" onclick="navigator.clipboard.writeText('Response copied!')">
+            <button class="enterprise-action-btn" onclick="const btn=this; const txt=btn.closest('.stChatMessage').querySelector('.stMarkdown').innerText; navigator.clipboard.writeText(txt); const orig=btn.innerHTML; btn.innerHTML='<span style=\\'font-size:12px;\\'>✅ Copied</span>'; setTimeout(()=>btn.innerHTML=orig, 2000);">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                 Copy
             </button>
-            <button class="enterprise-action-btn">
+            <button class="enterprise-action-btn" onclick="const btn=this; const orig=btn.innerHTML; btn.innerHTML='<span style=\\'font-size:12px;\\'>✅ Thanks!</span>'; setTimeout(()=>btn.innerHTML=orig, 2000);">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
                 Helpful
             </button>
-            <button class="enterprise-action-btn">
+            <button class="enterprise-action-btn" onclick="const btn=this; const orig=btn.innerHTML; btn.innerHTML='<span style=\\'font-size:12px;\\'>Will improve!</span>'; setTimeout(()=>btn.innerHTML=orig, 2000);">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path></svg>
                 Not Helpful
             </button>
-            <button class="enterprise-action-btn">
+            <button class="enterprise-action-btn" onclick="const btn=this; const orig=btn.innerHTML; btn.innerHTML='<span style=\\'font-size:12px;\\'>Submit again 👆</span>'; setTimeout(()=>btn.innerHTML=orig, 2000);">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
                 Regenerate
             </button>
-            <button class="enterprise-action-btn">
+            <button class="enterprise-action-btn" onclick="const btn=this; const orig=btn.innerHTML; btn.innerHTML='<span style=\\'font-size:12px;\\'>👆 Sources above</span>'; setTimeout(()=>btn.innerHTML=orig, 2000);">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                 View Sources
             </button>
-            <button class="enterprise-action-btn">
+            <button class="enterprise-action-btn" onclick="const btn=this; const txt=btn.closest('.stChatMessage').querySelector('.stMarkdown').innerText; const blob=new Blob([txt], {{type:'text/markdown'}}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='response.md'; a.click(); const orig=btn.innerHTML; btn.innerHTML='<span style=\\'font-size:12px;\\'>✅ Downloaded</span>'; setTimeout(()=>btn.innerHTML=orig, 2000);">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 Download Markdown
             </button>
