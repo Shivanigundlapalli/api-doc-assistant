@@ -213,19 +213,21 @@ header { background: transparent !important; }
 
 /* User Avatar Styling */
 [data-testid="chatAvatarIcon-user"] {
-    background-color: #FDEBED !important;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%236D122B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>');
+    background-color: transparent !important;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="19" fill="%23FCF0F2" stroke="%23F5D0D6" stroke-width="1.5"/><g fill="%236D122B"><circle cx="20" cy="14.5" r="6.5"/><path d="M 9 32 C 9 24 13 22 20 22 C 27 22 31 24 31 32 Z"/></g></svg>');
     background-repeat: no-repeat;
     background-position: center;
+    background-size: 40px 40px !important;
 }
 
 /* Assistant Avatar Styling */
 [data-testid="chatAvatarIcon-assistant"] {
-    background-color: #FFFFFF !important;
-    border: 1px solid #E8DADA !important;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="%236D122B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/><path d="M12 8V4H8"/></svg>');
+    background-color: transparent !important;
+    border: none !important;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="19" fill="%23FCF0F2" stroke="%23F5D0D6" stroke-width="1.5"/><g fill="%236D122B"><circle cx="20" cy="9" r="2.5"/><rect x="18.8" y="11" width="2.4" height="3"/><path d="M 10 18 L 8.5 18 A 2.5 2.5 0 0 0 8.5 23 L 10 23 Z"/><path d="M 30 18 L 31.5 18 A 2.5 2.5 0 0 1 31.5 23 L 30 23 Z"/><circle cx="15.5" cy="19.5" r="2.2"/><circle cx="24.5" cy="19.5" r="2.2"/><circle cx="16" cy="29" r="1.5"/><circle cx="20" cy="29" r="1.5"/><circle cx="24" cy="29" r="1.5"/></g><rect x="10.5" y="14" width="19" height="11" rx="5.5" fill="none" stroke="%236D122B" stroke-width="3.2"/></svg>');
     background-repeat: no-repeat;
     background-position: center;
+    background-size: 40px 40px !important;
 }
 
 /* Force message content container to use full width */
