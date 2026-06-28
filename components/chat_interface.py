@@ -30,18 +30,17 @@ def render_source_chips(sources: list, confidence: int = 0):
         if content not in unique_sources[name]["chunks"]:
             unique_sources[name]["chunks"].append(content)
     
-    # Render inline popovers using columns so they appear side-by-side
+    # Render inline popovers using CSS flexbox for perfect responsiveness
     if unique_sources and isinstance(unique_sources, dict):
-        cols = st.columns([1.2 for _ in range(len(unique_sources))] + [max(1, 10 - len(unique_sources))])
-        for idx, (name, data) in enumerate(unique_sources.items()):
-        
-            # Heuristics for a clean title and section
-            title = name.replace(".md", "").replace("-", " ").replace("_", " ").title()
-            
-            # Determine Confidence String
-            conf_str = "High" if confidence >= 80 else ("Medium" if confidence >= 40 else "Low")
-            
-            with cols[idx]:
+        with st.container():
+            st.markdown('<div class="source-chips-hook"></div>', unsafe_allow_html=True)
+            for idx, (name, data) in enumerate(unique_sources.items()):
+                # Heuristics for a clean title and section
+                title = name.replace(".md", "").replace("-", " ").replace("_", " ").title()
+                
+                # Determine Confidence String
+                conf_str = "High" if confidence >= 80 else ("Medium" if confidence >= 40 else "Low")
+                
                 with st.popover(f"📄 {name}"):
                     st.markdown(f"**Retrieved From**")
                     st.markdown(f"{name}")
@@ -57,10 +56,27 @@ def render_source_chips(sources: list, confidence: int = 0):
     # Action buttons below
     st.markdown(f"""
         <style>
+            /* Responsive Flexbox wrapper for Source Chips */
+            div[data-testid="stVerticalBlock"]:has(.source-chips-hook) {{
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                gap: 12px !important;
+                align-items: center !important;
+            }}
+            div[data-testid="stVerticalBlock"]:has(.source-chips-hook) > div[data-testid="stElementContainer"] {{
+                width: auto !important;
+                flex: 0 0 auto !important;
+            }}
+            div[data-testid="stVerticalBlock"]:has(.source-chips-hook) > div[data-testid="stElementContainer"]:has(.source-chips-hook) {{
+                display: none !important;
+            }}
+
             /* Source Card Overrides */
             div[data-testid="stPopover"] > button {{
+                width: max-content !important;
                 min-width: 140px !important;
-                width: 100% !important;
+                max-width: 250px !important;
                 height: 48px !important;
                 padding: 0 12px !important;
                 border-radius: 12px !important;
