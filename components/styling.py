@@ -206,28 +206,17 @@ header { background: transparent !important; }
     justify-content: center !important;
 }
 
-/* Hide default streamlit SVGs */
-[data-testid="chatAvatarIcon-user"] svg, [data-testid="chatAvatarIcon-assistant"] svg {
-    display: none !important;
+/* Ensure native image avatars render flawlessly */
+[data-testid="chatAvatarIcon-user"], [data-testid="chatAvatarIcon-assistant"] {
+    background-color: transparent !important;
 }
 
-/* User Avatar Styling */
-[data-testid="chatAvatarIcon-user"] {
-    background-color: transparent !important;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="19" fill="%23FCF0F2" stroke="%23F5D0D6" stroke-width="1.5"/><g fill="%236D122B"><circle cx="20" cy="14.5" r="6.5"/><path d="M 9 32 C 9 24 13 22 20 22 C 27 22 31 24 31 32 Z"/></g></svg>');
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: 40px 40px !important;
-}
-
-/* Assistant Avatar Styling */
-[data-testid="chatAvatarIcon-assistant"] {
-    background-color: transparent !important;
-    border: none !important;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="19" fill="%23FFFFFF" stroke="%23E8DADA" stroke-width="1.5"/><path d="M 20 8 C 20 15 15 20 8 20 C 15 20 20 25 20 32 C 20 25 25 20 32 20 C 25 20 20 15 20 8 Z" fill="%236D122B"/></svg>');
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: 40px 40px !important;
+[data-testid="chatAvatarIcon-user"] img, [data-testid="chatAvatarIcon-assistant"] img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    border-radius: 50% !important;
+    display: block !important;
 }
 
 /* Force message content container to use full width */

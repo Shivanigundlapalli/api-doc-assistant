@@ -197,7 +197,9 @@ if not st.session_state.chat_history:
 from components.chat_interface import render_source_chips
 
 for i, msg in enumerate(st.session_state.get("chat_history", [])):
-    with st.chat_message(msg.get("role", "user")):
+    role = msg.get("role", "user")
+    avatar = "assets/assistant_avatar.svg" if role == "assistant" else "assets/user_avatar.svg"
+    with st.chat_message(role, avatar=avatar):
         st.markdown(msg.get("answer", msg.get("question", msg.get("content", ""))))
         if msg.get("role") == "assistant" and msg.get("sources"):
             render_source_chips(msg.get("sources"), confidence=msg.get("confidence", 0))
@@ -212,7 +214,7 @@ else:
 
 if query:
     # 1. Render User Message
-    with st.chat_message("user"):
+    with st.chat_message("user", avatar="assets/user_avatar.svg"):
         st.markdown(query)
         
     add_message(st.session_state.current_chat_id, "user", query)
@@ -292,7 +294,7 @@ if query:
                                     except:
                                         err_msg = err_json
                                         
-                                    with st.chat_message("assistant", avatar="🤖"):
+                                    with st.chat_message("assistant", avatar="assets/assistant_avatar.svg"):
                                         st.markdown(err_msg)
                                     st.session_state.chat_history.append({"role": "user", "question": query})
                                     st.session_state.chat_history.append({"role": "assistant", "answer": err_msg, "sources": []})
@@ -333,14 +335,14 @@ if query:
                     "• Network issue\n\n"
                     "Please try again in a few moments."
                 )
-                with st.chat_message("assistant", avatar="🤖"):
+                with st.chat_message("assistant", avatar="assets/assistant_avatar.svg"):
                     st.markdown(err_msg)
                 st.session_state.chat_history.append({"role": "user", "question": query})
                 st.session_state.chat_history.append({"role": "assistant", "answer": err_msg, "sources": []})
                 
     if answer_stream is not None:
         # Stream Response into Native UI safely from the network generator
-        with st.chat_message("assistant", avatar="🤖"):
+        with st.chat_message("assistant", avatar="assets/assistant_avatar.svg"):
             answer = ""
             try:
                 
