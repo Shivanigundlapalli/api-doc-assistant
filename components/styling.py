@@ -19,7 +19,7 @@ def inject_custom_css():
     --primary-hover: #5B1024;
     --primary-dark: #4A0D1D;
     --primary-accent: #8C1C3A;
-    --primary-light: #FCEEEF;
+    --primary-light: #FCF7F8;
     
     --text-primary: #1E1E1E;
     --text-secondary: #5F5F5F;
@@ -60,11 +60,11 @@ h1 {
     margin-bottom: 24px !important; 
 }
 h2 { 
-    font-size: 20px !important; 
+    font-size: 32px !important; 
     font-weight: 600 !important;
-    margin-top: 32px !important; 
+    margin-top: 36px !important; 
     padding-top: 16px !important;
-    margin-bottom: 16px !important; 
+    margin-bottom: 24px !important; 
     color: var(--text-primary) !important;
 }
 h3 { 
@@ -182,7 +182,7 @@ header { background: transparent !important; }
     padding: 0 !important;
     background: transparent !important;
     width: 100% !important;
-    max-width: 1100px !important;
+    max-width: 900px !important;
     margin: 0 auto 32px auto !important;
 }
 
@@ -204,7 +204,7 @@ div[data-testid="stChatMessageContent"] {
     border-radius: 18px !important;
     border: 1px solid var(--border-color) !important;
     box-shadow: var(--shadow-card) !important;
-    padding: 24px !important;
+    padding: 28px !important;
     transition: transform var(--transition-hover), box-shadow var(--transition-hover) !important;
 }
 .stChatMessage[data-testid="stChatMessage"]:nth-child(even):hover {

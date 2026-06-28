@@ -345,9 +345,9 @@ if query:
             try:
                 
                 if confidence >= 80:
-                    st.markdown(f"🟢 **Confidence:** High (Based on {len(top_docs)} documentation sections)")
+                    st.markdown(f"<div style='display:inline-flex; align-items:center; background-color:var(--bg-secondary); padding:6px 14px; border-radius:20px; border:1px solid var(--border-color); font-size:13px; font-weight:500; color:var(--text-primary);'><span style='margin-right:8px; font-size:14px;'>🟢</span> High Confidence &nbsp;&middot;&nbsp; Grounded in {len(top_docs)} documentation sections</div>", unsafe_allow_html=True)
                 elif confidence >= 40:
-                    st.markdown(f"🟡 **Confidence:** Medium (Based on {len(top_docs)} documentation sections)")
+                    st.markdown(f"<div style='display:inline-flex; align-items:center; background-color:var(--bg-secondary); padding:6px 14px; border-radius:20px; border:1px solid var(--border-color); font-size:13px; font-weight:500; color:var(--text-primary);'><span style='margin-right:8px; font-size:14px;'>🟡</span> Medium Confidence &nbsp;&middot;&nbsp; Grounded in {len(top_docs)} documentation sections</div>", unsafe_allow_html=True)
                     
                 start_time = time.time()
                 

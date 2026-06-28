@@ -32,7 +32,7 @@ def render_source_chips(sources: list, confidence: int = 0):
     
     # Render inline popovers using columns so they appear side-by-side
     if unique_sources and isinstance(unique_sources, dict):
-        cols = st.columns(len(unique_sources) + 1)
+        cols = st.columns([1.2 for _ in range(len(unique_sources))] + [max(1, 10 - len(unique_sources))])
         for idx, (name, data) in enumerate(unique_sources.items()):
         
             # Heuristics for a clean title and section
@@ -82,7 +82,7 @@ def render_source_chips(sources: list, confidence: int = 0):
                 transform: translateY(0);
             }}
         </style>
-        <div class="action-buttons-wrapper animated-fade" style="margin-top: 24px; display: flex; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--border-color); padding-top: 16px;">
+        <div class="action-buttons-wrapper animated-fade" style="margin-top: 24px; display: flex; gap: 6px; flex-wrap: wrap; border-top: 1px solid var(--border-color); padding-top: 16px;">
             <button class="enterprise-action-btn" onclick="navigator.clipboard.writeText('Response copied!')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                 Copy
