@@ -115,10 +115,11 @@ ol > li::before {
     font-size: 12px;
 }
 
-/* Center Container max width to 1300px */
+/* Center Container max width */
 .main .block-container {
-    max-width: 1300px !important;
-    margin: 0 auto;
+    max-width: 1050px !important;
+    width: 100% !important;
+    margin: 0 auto !important;
     padding-top: 2rem !important;
     padding-bottom: 5rem !important;
 }
@@ -182,7 +183,6 @@ header { background: transparent !important; }
     padding: 0 !important;
     background: transparent !important;
     width: 100% !important;
-    max-width: 900px !important;
     margin: 0 auto 32px auto !important;
 }
 
@@ -239,7 +239,7 @@ div[data-testid="stChatMessageContent"] {
 }
 
 /* Assistant Message Bubble (White Card) */
-.stChatMessage[data-testid="stChatMessage"]:nth-child(even) div[data-testid="stChatMessageContent"] {
+.stChatMessage[data-testid="stChatMessage"]:nth-child(even) {
     background-color: var(--bg-card) !important;
     border-radius: 18px !important;
     border: 1px solid var(--border-color) !important;
@@ -247,13 +247,13 @@ div[data-testid="stChatMessageContent"] {
     padding: 28px !important;
     transition: transform var(--transition-hover), box-shadow var(--transition-hover) !important;
 }
-.stChatMessage[data-testid="stChatMessage"]:nth-child(even) div[data-testid="stChatMessageContent"]:hover {
+.stChatMessage[data-testid="stChatMessage"]:nth-child(even):hover {
     transform: translateY(-2px);
     box-shadow: 0 12px 40px rgba(0,0,0,.08) !important;
 }
 
 /* User Message Bubble */
-.stChatMessage[data-testid="stChatMessage"]:nth-child(odd) div[data-testid="stChatMessageContent"] {
+.stChatMessage[data-testid="stChatMessage"]:nth-child(odd) {
     background-color: var(--primary-light) !important;
     border: none !important;
     box-shadow: none !important;
